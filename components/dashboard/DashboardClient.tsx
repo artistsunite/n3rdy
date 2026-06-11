@@ -177,14 +177,17 @@ export default function DashboardClient() {
     setTriggering(true);
     try {
       const res = await fetch('/api/bot/trigger', { method: 'POST' });
-      if (res.ok) {
+      if (res.status === 202) {
+        showToast('Generating — check your feed in a moment');
+        setTimeout(() => loadBriefings(), 10_000);
+      } else if (res.ok) {
         showToast('Briefing generated!');
         await Promise.all([loadData(), loadBriefings()]);
       } else {
-        const d = await res.json();
+        const d = await res.json().catch(() => ({}));
         showToast(d.error || 'Failed', false);
       }
-    } catch { showToast('Failed to reach bot', false); }
+    } catch { showToast('Could not reach bot service', false); }
     finally { setTriggering(false); }
   };
 

@@ -12,12 +12,11 @@ export interface Briefing {
 
 export async function GET(request: Request) {
   const session = await auth();
-  if (!session?.user?.email) {
+  if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const uid = (session.user as { id?: string }).id ?? session.user.email;
-
+  const uid = session.user.id;
   const { searchParams } = new URL(request.url);
   const limitParam = parseInt(searchParams.get('limit') ?? '20', 10);
   const limit = Math.min(Math.max(limitParam, 1), 100);
@@ -51,11 +50,11 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   const session = await auth();
-  if (!session?.user?.email) {
+  if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const uid = (session.user as { id?: string }).id ?? session.user.email;
+  const uid = session.user.id;
 
   try {
     const { id } = await request.json();

@@ -4,7 +4,7 @@ import { getUserBotConfig } from '@/lib/firestore-admin';
 
 export async function GET() {
   const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const cfg = await getUserBotConfig(session.user.id);
   const botUrl = process.env.BOT_SERVICE_URL;
