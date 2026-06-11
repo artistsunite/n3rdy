@@ -111,6 +111,11 @@ body {
 .text-glow-success { text-shadow: 0 0 24px rgba(0,255,136,0.5); }
 .text-glow-warning { text-shadow: 0 0 24px rgba(255,200,87,0.5); }
 
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-12px); }
+}
+
 @keyframes ticker {
   0%   { transform: translateX(0); }
   100% { transform: translateX(-50%); }
