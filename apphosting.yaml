@@ -7,7 +7,7 @@ runConfig:
 
 env:
   - variable: NEXTAUTH_URL
-    value: https://n3rdyus1-990208661427.us-central1.run.app
+    value: https://n3rdy.info
     availability:
       - BUILD
       - RUNTIME
