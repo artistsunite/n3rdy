@@ -23,6 +23,7 @@ const config: Config = {
       fontFamily: {
         sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
         mono: ['var(--font-mono)', 'monospace'],
+        instrument: ['"Instrument Serif"', 'serif'],
       },
       animation: {
         'ticker': 'ticker 50s linear infinite',

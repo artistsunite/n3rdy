@@ -1,31 +1,19 @@
-import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
-import Pipeline from '../components/Pipeline';
-import IntelligenceEngine from '../components/IntelligenceEngine';
-import SampleReport from '../components/SampleReport';
-import PredictiveChains from '../components/PredictiveChains';
-import TelegramDemo from '../components/TelegramDemo';
-import MarketCoverage from '../components/MarketCoverage';
-import Architecture from '../components/Architecture';
-import WhyN3RDY from '../components/WhyN3RDY';
-import FinalCTA from '../components/FinalCTA';
+import AboutSection from '../components/AboutSection';
+import FeaturedVideoSection from '../components/FeaturedVideoSection';
+import PhilosophySection from '../components/PhilosophySection';
+import ServicesSection from '../components/ServicesSection';
 import Footer from '../components/Footer';
 
 export default function Home() {
   return (
     <>
-      <Navbar />
       <main>
         <Hero />
-        <Pipeline />
-        <IntelligenceEngine />
-        <SampleReport />
-        <PredictiveChains />
-        <TelegramDemo />
-        <MarketCoverage />
-        <Architecture />
-        <WhyN3RDY />
-        <FinalCTA />
+        <AboutSection />
+        <FeaturedVideoSection />
+        <PhilosophySection />
+        <ServicesSection />
       </main>
       <Footer />
     </>
