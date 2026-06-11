@@ -115,12 +115,17 @@ export default function DashboardClient() {
     setBriefingsLoading(true);
     try {
       const res = await fetch('/api/briefings?limit=20');
+      const data = await res.json();
       if (res.ok) {
-        const data = await res.json();
         setBriefings(data.briefings ?? []);
+      } else {
+        showToast(data.error ?? `Briefings fetch failed (${res.status})`, false);
       }
-    } catch { /* silent */ }
-    finally { setBriefingsLoading(false); }
+    } catch (err) {
+      showToast('Could not load briefings', false);
+    } finally {
+      setBriefingsLoading(false);
+    }
   }, []);
 
   const loadData = useCallback(async () => {
