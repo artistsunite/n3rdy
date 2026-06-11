@@ -1,4 +1,4 @@
-import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
+import { initializeApp, getApps, App } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 
 let app: App;
@@ -7,8 +7,10 @@ let db: Firestore;
 function getAdminApp(): App {
   if (!app) {
     if (getApps().length === 0) {
-      // On Firebase App Hosting, Application Default Credentials work automatically
-      app = initializeApp({ projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID });
+      // On Firebase App Hosting, Application Default Credentials are available
+      // automatically. Do NOT pass projectId from env — secrets may have a BOM
+      // prepended and an explicit projectId overrides the ADC-inferred one.
+      app = initializeApp();
     } else {
       app = getApps()[0];
     }
