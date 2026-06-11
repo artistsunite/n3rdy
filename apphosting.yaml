@@ -19,51 +19,51 @@ env:
       - BUILD
       - RUNTIME
 
-  # Firebase public config (safe for client-side)
+  # Firebase public config — stored in Secret Manager to avoid git scanner alerts
   - variable: NEXT_PUBLIC_FIREBASE_API_KEY
-    value: AIzaSyCQWVfRnGMa4BF-Ybc_ua3rBJTClZzNdW8
+    secret: NEXT_PUBLIC_FIREBASE_API_KEY
     availability:
       - BUILD
       - RUNTIME
 
   - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-    value: n3rdy-499023.firebaseapp.com
+    secret: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
     availability:
       - BUILD
       - RUNTIME
 
   - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-    value: n3rdy-499023
+    secret: NEXT_PUBLIC_FIREBASE_PROJECT_ID
     availability:
       - BUILD
       - RUNTIME
 
   - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-    value: n3rdy-499023.firebasestorage.app
+    secret: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
     availability:
       - BUILD
       - RUNTIME
 
   - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-    value: "990208661427"
+    secret: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
     availability:
       - BUILD
       - RUNTIME
 
   - variable: NEXT_PUBLIC_FIREBASE_APP_ID
-    value: 1:990208661427:web:f6ead51467a2fd1e629dc6
+    secret: NEXT_PUBLIC_FIREBASE_APP_ID
     availability:
       - BUILD
       - RUNTIME
 
   - variable: NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
-    value: G-833LYHKFTT
+    secret: NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
     availability:
       - BUILD
       - RUNTIME
 
   - variable: NEXT_PUBLIC_FIREBASE_VAPID_KEY
-    value: BF2b3tUaI52aOtYWKBTNstwiOoAal2OPMDf6uUUux9vIav7FoHqC3_zmtEoC1_IetD_caCFxRYCLK7uTSQj50fo
+    secret: NEXT_PUBLIC_FIREBASE_VAPID_KEY
     availability:
       - BUILD
       - RUNTIME
