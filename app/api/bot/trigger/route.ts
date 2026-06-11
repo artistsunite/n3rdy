@@ -3,7 +3,7 @@ import { auth } from '@/auth';
 
 export async function POST() {
   const session = await auth();
-  if (!session?.user?.id) {
+  if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -11,35 +11,45 @@ export async function POST() {
   const botUrl = process.env.BOT_SERVICE_URL;
 
   if (!botUrl) {
-    return NextResponse.json({ error: 'Bot service not configured' }, { status: 503 });
+    return NextResponse.json({ error: 'BOT_SERVICE_URL not set' }, { status: 503 });
   }
 
   const apiKey = process.env.BOT_INTERNAL_API_KEY ?? '';
+  const targetUrl = `${botUrl}/users/${uid}/brief-now`;
 
+  let res: Response;
   try {
-    const res = await fetch(`${botUrl}/users/${uid}/brief-now`, {
+    res = await fetch(targetUrl, {
       method: 'POST',
       headers: { 'x-bot-api-key': apiKey },
-      // Briefing generation can take 30–60s; stay under App Hosting's 60s route limit
       signal: AbortSignal.timeout(58_000),
     });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => 'Bot error');
-      return NextResponse.json({ error: text }, { status: res.status });
-    }
-
-    const data = await res.json().catch(() => ({}));
-    return NextResponse.json({ ok: true, briefingId: data.briefingId ?? null });
   } catch (err: unknown) {
-    if (err instanceof Error && err.name === 'TimeoutError') {
-      // Bot is still generating — the briefing will appear in the feed shortly
-      return NextResponse.json(
-        { ok: true, generating: true },
-        { status: 202 }
-      );
+    const isTimeout =
+      err instanceof Error &&
+      (err.name === 'TimeoutError' || err.name === 'AbortError');
+
+    if (isTimeout) {
+      return NextResponse.json({ ok: true, generating: true }, { status: 202 });
     }
-    console.error('Trigger error:', err);
-    return NextResponse.json({ error: 'Failed to reach bot service' }, { status: 502 });
+
+    const detail = err instanceof Error ? err.message : String(err);
+    console.error('Trigger fetch failed:', targetUrl, detail);
+    return NextResponse.json(
+      { error: `Cannot connect to bot: ${detail}` },
+      { status: 502 }
+    );
   }
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    console.error('Bot returned', res.status, text);
+    return NextResponse.json(
+      { error: `Bot error ${res.status}: ${text}` },
+      { status: res.status }
+    );
+  }
+
+  const data = await res.json().catch(() => ({}));
+  return NextResponse.json({ ok: true, briefingId: data.briefingId ?? null });
 }
