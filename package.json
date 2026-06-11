@@ -1,25 +1,38 @@
 {
-  "name": "purple-croc-website",
+  "name": "n3rdy-intelligence",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "export": "next build",
     "start": "next start -p ${PORT:-3000}",
-    "deploy": "npm run export && firebase deploy --only hosting",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:generate": "prisma generate",
+    "db:seed": "node prisma/seed.js"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.104.1",
+    "@prisma/client": "^5.22.0",
+    "@types/cheerio": "^0.22.35",
+    "bullmq": "^5.78.0",
+    "cheerio": "^1.2.0",
     "firebase": "^12.14.0",
     "firebase-admin": "^14.0.0",
     "framer-motion": "^12.40.0",
+    "ioredis": "^5.11.1",
     "lucide-react": "^1.17.0",
     "next": "^16.2.6",
     "next-auth": "^5.0.0-beta.31",
+    "prisma": "^5.22.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "recharts": "^3.8.1"
+    "recharts": "^3.8.1",
+    "rss-parser": "^3.13.0"
   },
   "devDependencies": {
     "@types/node": "^25.7.0",

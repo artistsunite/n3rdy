@@ -13,17 +13,32 @@ env:
       - BUILD
       - RUNTIME
 
-  - variable: BOT_SERVICE_URL
-    value: https://n3rdyus1-s5k2fr6a6q-uc.a.run.app
+  # PostgreSQL (Neon) — add DATABASE_URL secret to GCP Secret Manager
+  - variable: DATABASE_URL
+    secret: DATABASE_URL
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # Upstash Redis for BullMQ job queues
+  - variable: REDIS_URL
+    secret: REDIS_URL
     availability:
       - RUNTIME
 
-  - variable: BOT_INTERNAL_API_KEY
-    secret: BOT_INTERNAL_API_KEY
+  # Anthropic Claude API
+  - variable: ANTHROPIC_API_KEY
+    secret: ANTHROPIC_API_KEY
     availability:
       - RUNTIME
 
-  # Firebase public config — stored in Secret Manager to avoid git scanner alerts
+  # Cron endpoint protection
+  - variable: CRON_SECRET
+    secret: CRON_SECRET
+    availability:
+      - RUNTIME
+
+  # Firebase public config
   - variable: NEXT_PUBLIC_FIREBASE_API_KEY
     secret: NEXT_PUBLIC_FIREBASE_API_KEY
     availability:

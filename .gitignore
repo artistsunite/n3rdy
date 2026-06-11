@@ -18,3 +18,5 @@ node-v24.15.0-win-x64.zip
 # misc
 .DS_Store
 *.log
+
+/lib/generated/prisma

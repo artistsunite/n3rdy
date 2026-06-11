@@ -1,0 +1,228 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id // Google providerAccountId (stable numeric ID)
+  email       String   @unique
+  name        String?
+  image       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  preferences   UserPreferences?
+  userSources   UserSource[]
+  watchlist     WatchlistItem[]
+  briefings     Briefing[]
+  alerts        Alert[]
+  notifications Notification[]
+}
+
+model UserPreferences {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessType      String?
+  industry          String?
+  briefingStyle     String   @default("executive")
+  dashboardLayout   Json     @default("{}")
+  briefingFrequency Int      @default(60)
+  enabledCategories String[] @default(["markets", "crypto", "macro", "geopolitics", "technology"])
+  timezone          String   @default("UTC")
+  updatedAt         DateTime @updatedAt
+}
+
+model Source {
+  id            String    @id @default(cuid())
+  name          String
+  url           String    @unique
+  rssUrl        String?
+  category      String
+  region        String    @default("global")
+  language      String    @default("en")
+  trustScore    Float     @default(0.5)
+  biasTag       String?
+  isDefault     Boolean   @default(false)
+  isActive      Boolean   @default(true)
+  lastFetchedAt DateTime?
+  createdAt     DateTime  @default(now())
+
+  userSources UserSource[]
+  articles    Article[]
+}
+
+model UserSource {
+  id       String  @id @default(cuid())
+  userId   String
+  sourceId String
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source   Source  @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  priority Int     @default(5)
+  isActive Boolean @default(true)
+  addedAt  DateTime @default(now())
+
+  @@unique([userId, sourceId])
+}
+
+model Article {
+  id          String   @id @default(cuid())
+  title       String
+  url         String   @unique
+  author      String?
+  publishedAt DateTime
+  summary     String?  @db.Text
+  fullText    String?  @db.Text
+  imageUrl    String?
+  sourceId    String
+  source      Source   @relation(fields: [sourceId], references: [id])
+  dedupeHash  String   @unique
+  fetchedAt   DateTime @default(now())
+
+  analysis ArticleAnalysis?
+  entities ArticleEntity[]
+
+  @@index([publishedAt(sort: Desc)])
+  @@index([sourceId])
+}
+
+model ArticleAnalysis {
+  id                     String   @id @default(cuid())
+  articleId              String   @unique
+  article                Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  sentiment              String
+  sentimentScore         Float
+  bullishBearish         String
+  marketImpactScore      Float
+  relevanceScore         Float
+  urgencyScore           Float
+  riskLevel              String
+  sourceReliabilityScore Float    @default(0.5)
+  shortSummary           String   @db.Text
+  keyFacts               Json     @default("[]")
+  entities               Json     @default("{}")
+  sectorsAffected        Json     @default("[]")
+  secondOrderEffects     String?  @db.Text
+  analyzedAt             DateTime @default(now())
+
+  @@index([marketImpactScore(sort: Desc)])
+  @@index([sentimentScore])
+}
+
+model Entity {
+  id   String @id @default(cuid())
+  name String
+  type String
+
+  articles ArticleEntity[]
+
+  @@unique([name, type])
+  @@index([type])
+}
+
+model ArticleEntity {
+  articleId    String
+  entityId     String
+  article      Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  entity       Entity  @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  mentionCount Int     @default(1)
+
+  @@id([articleId, entityId])
+}
+
+model WatchlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  value     String
+  label     String
+  priority  Int      @default(5)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([type, value])
+}
+
+model Briefing {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   @default("daily")
+  content   Json
+  htmlText  String?  @db.Text
+  plainText String?  @db.Text
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model EconomicEvent {
+  id             String   @id @default(cuid())
+  country        String
+  eventType      String
+  title          String
+  scheduledAt    DateTime
+  forecast       String?
+  previous       String?
+  actual         String?
+  marketImpact   String   @default("medium")
+  aiContext      String?  @db.Text
+  assetsAffected String[] @default([])
+  source         String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([scheduledAt])
+  @@index([country])
+}
+
+model TrendingTopic {
+  id             String   @id @default(cuid())
+  name           String
+  category       String   @default("general")
+  mentionCount   Int      @default(0)
+  velocity       Float    @default(0.0)
+  sentimentScore Float    @default(0.0)
+  period         String   @default("24h")
+  computedAt     DateTime @default(now())
+
+  @@index([period, computedAt(sort: Desc)])
+  @@index([mentionCount(sort: Desc)])
+}
+
+model Alert {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  type      String
+  condition Json
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  notifications Notification[]
+
+  @@index([userId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  alertId   String?
+  alert     Alert?   @relation(fields: [alertId], references: [id])
+  content   String   @db.Text
+  title     String
+  type      String   @default("info")
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([read])
+}

@@ -1,75 +1,55 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { adminDb } from '@/lib/firestore-admin';
+import { db } from '@/lib/db';
+import { getBriefingQueue } from '@/lib/queue';
 
-export interface Briefing {
-  id: string;
-  text: string;
-  htmlText?: string;
-  createdAt: string;
-  read: boolean;
-}
-
-export async function GET(request: Request) {
+export async function GET(req: NextRequest) {
   const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const uid = session.user.id;
-  const { searchParams } = new URL(request.url);
-  const limitParam = parseInt(searchParams.get('limit') ?? '20', 10);
-  const limit = Math.min(Math.max(limitParam, 1), 100);
+  const { searchParams } = new URL(req.url);
+  const limit = Math.min(parseInt(searchParams.get('limit') ?? '20'), 100);
+  const offset = parseInt(searchParams.get('offset') ?? '0');
 
-  try {
-    const snapshot = await adminDb()
-      .collection('users')
-      .doc(uid)
-      .collection('briefings')
-      .orderBy('createdAt', 'desc')
-      .limit(limit)
-      .get();
+  const briefings = await db.briefing.findMany({
+    where: { userId: uid },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    skip: offset,
+    select: { id: true, type: true, content: true, plainText: true, read: true, createdAt: true },
+  });
 
-    const briefings: Briefing[] = snapshot.docs.map((doc) => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        text: data.text ?? '',
-        htmlText: data.htmlText ?? undefined,
-        createdAt: data.createdAt?.toDate?.()?.toISOString() ?? new Date().toISOString(),
-        read: data.read ?? false,
-      };
-    });
-
-    return NextResponse.json({ briefings });
-  } catch (err) {
-    console.error('Failed to fetch briefings:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  }
+  return NextResponse.json({ briefings });
 }
 
-export async function PATCH(request: Request) {
+export async function POST(req: NextRequest) {
   const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const uid = session.user.id;
+  const body = await req.json().catch(() => ({}));
+  const type = body.type ?? 'custom';
 
-  try {
-    const { id } = await request.json();
-    if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+  // Ensure user record exists
+  await db.user.upsert({
+    where: { id: uid },
+    create: { id: uid, email: session.user.email ?? '', name: session.user.name ?? null },
+    update: {},
+  });
 
-    await adminDb()
-      .collection('users')
-      .doc(uid)
-      .collection('briefings')
-      .doc(id)
-      .update({ read: true });
+  const queue = getBriefingQueue();
+  const job = await queue.add('briefing', { userId: uid, type });
+  return NextResponse.json({ ok: true, jobId: job.id }, { status: 202 });
+}
 
-    return NextResponse.json({ ok: true });
-  } catch (err) {
-    console.error('Failed to mark briefing read:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  }
+export async function PATCH(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { id } = await req.json();
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+
+  await db.briefing.updateMany({ where: { id, userId: session.user.id }, data: { read: true } });
+  return NextResponse.json({ ok: true });
 }

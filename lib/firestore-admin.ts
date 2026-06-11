@@ -4,13 +4,22 @@ import { getFirestore, Firestore } from 'firebase-admin/firestore';
 let app: App;
 let db: Firestore;
 
+/** Strip BOM and non-printable chars — Secret Manager prepends U+FEFF on some values */
+function cleanEnv(value: string | undefined): string {
+  if (!value) return '';
+  let out = '';
+  for (let i = 0; i < value.length; i++) {
+    const c = value.charCodeAt(i);
+    if (c >= 32 && c <= 126) out += value[i];
+  }
+  return out;
+}
+
 function getAdminApp(): App {
   if (!app) {
     if (getApps().length === 0) {
-      // On Firebase App Hosting, Application Default Credentials are available
-      // automatically. Do NOT pass projectId from env — secrets may have a BOM
-      // prepended and an explicit projectId overrides the ADC-inferred one.
-      app = initializeApp();
+      const projectId = cleanEnv(process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
+      app = projectId ? initializeApp({ projectId }) : initializeApp();
     } else {
       app = getApps()[0];
     }

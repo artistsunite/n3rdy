@@ -1,19 +1,17 @@
-import Hero from '../components/Hero';
-import AboutSection from '../components/AboutSection';
-import FeaturedVideoSection from '../components/FeaturedVideoSection';
-import PhilosophySection from '../components/PhilosophySection';
-import ServicesSection from '../components/ServicesSection';
-import Footer from '../components/Footer';
+import Hero from '@/components/landing/Hero';
+import FeaturesSection from '@/components/landing/FeaturesSection';
+import UseCasesSection from '@/components/landing/UseCasesSection';
+import CTASection from '@/components/landing/CTASection';
+import Footer from '@/components/Footer';
 
 export default function Home() {
   return (
     <>
       <main>
         <Hero />
-        <AboutSection />
-        <FeaturedVideoSection />
-        <PhilosophySection />
-        <ServicesSection />
+        <FeaturesSection />
+        <UseCasesSection />
+        <CTASection />
       </main>
       <Footer />
     </>
