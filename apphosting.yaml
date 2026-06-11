@@ -14,7 +14,7 @@ env:
       - RUNTIME
 
   - variable: BOT_SERVICE_URL
-    value: https://n3rdyus1-990208661427.us-central1.run.app
+    value: https://n3rdyus1-s5k2fr6a6q-uc.a.run.app
     availability:
       - RUNTIME
 
