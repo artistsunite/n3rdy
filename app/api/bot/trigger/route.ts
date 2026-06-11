@@ -1,6 +1,15 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getUserBotConfig, saveUserBotConfig } from '@/lib/firestore-admin';
+
+function cleanSecret(value: string | undefined): string {
+  // Strip leading UTF-8 BOM (char code 65279 = 0xFEFF) and whitespace.
+  // GCP Secret Manager can prepend a BOM when secrets are pasted from
+  // BOM-encoded files, which breaks HTTP headers (bytes must be <= 255).
+  let s = (value ?? '').trim();
+  while (s.charCodeAt(0) === 0xFEFF) s = s.slice(1);
+  return s.trim();
+}
 
 export async function POST() {
   const session = await auth();
@@ -9,24 +18,20 @@ export async function POST() {
   }
 
   const uid = session.user.id;
-  const botUrl = process.env.BOT_SERVICE_URL;
+  const botUrl = cleanSecret(process.env.BOT_SERVICE_URL);
 
   if (!botUrl) {
     return NextResponse.json({ error: 'BOT_SERVICE_URL not set' }, { status: 503 });
   }
 
-  // Ensure the user has a config doc in Firestore before calling the bot.
-  // If this is their first trigger the doc won't exist yet; create defaults.
   try {
-    const existing = await getUserBotConfig(uid);
-    if (!existing.isActive) {
-      await saveUserBotConfig(uid, { isActive: false });
-    }
+    await getUserBotConfig(uid);
+    await saveUserBotConfig(uid, {});
   } catch {
-    // Non-fatal — bot falls back to defaults on its own
+    // Non-fatal
   }
 
-  const apiKey = process.env.BOT_INTERNAL_API_KEY ?? '';
+  const apiKey = cleanSecret(process.env.BOT_INTERNAL_API_KEY);
   const targetUrl = `${botUrl}/users/${uid}/brief-now`;
 
   let res: Response;
