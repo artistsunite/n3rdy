@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import Providers from './providers';
+import FirebaseAnalytics from '@/components/FirebaseAnalytics';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -36,7 +37,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body className="bg-n3-bg text-n3-text antialiased overflow-x-hidden">
-        <Providers>{children}</Providers>
+        <Providers>
+          <FirebaseAnalytics />
+          {children}
+        </Providers>
       </body>
     </html>
   );
