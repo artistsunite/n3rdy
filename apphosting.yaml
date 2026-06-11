@@ -13,10 +13,14 @@ env:
       - BUILD
       - RUNTIME
 
-  - variable: NEXT_PUBLIC_BOT_API_URL
-    value: http://localhost:8000
+  - variable: BOT_SERVICE_URL
+    value: https://n3rdyus1-990208661427.us-central1.run.app
     availability:
-      - BUILD
+      - RUNTIME
+
+  - variable: BOT_INTERNAL_API_KEY
+    secret: BOT_INTERNAL_API_KEY
+    availability:
       - RUNTIME
 
   # Firebase public config — stored in Secret Manager to avoid git scanner alerts
