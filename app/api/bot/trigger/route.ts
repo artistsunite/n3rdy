@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { getUserBotConfig, saveUserBotConfig } from '@/lib/firestore-admin';
 
 export async function POST() {
   const session = await auth();
@@ -12,6 +13,17 @@ export async function POST() {
 
   if (!botUrl) {
     return NextResponse.json({ error: 'BOT_SERVICE_URL not set' }, { status: 503 });
+  }
+
+  // Ensure the user has a config doc in Firestore before calling the bot.
+  // If this is their first trigger the doc won't exist yet; create defaults.
+  try {
+    const existing = await getUserBotConfig(uid);
+    if (!existing.isActive) {
+      await saveUserBotConfig(uid, { isActive: false });
+    }
+  } catch {
+    // Non-fatal — bot falls back to defaults on its own
   }
 
   const apiKey = process.env.BOT_INTERNAL_API_KEY ?? '';
