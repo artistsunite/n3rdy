@@ -1,14 +1,17 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getUserBotConfig, saveUserBotConfig } from '@/lib/firestore-admin';
 
+/** Keep only printable ASCII (32-126). Removes BOM, control chars, any non-ASCII.
+ *  API keys, tokens, and URLs are always printable ASCII so nothing valid is lost. */
 function cleanSecret(value: string | undefined): string {
-  // Strip leading UTF-8 BOM (char code 65279 = 0xFEFF) and whitespace.
-  // GCP Secret Manager can prepend a BOM when secrets are pasted from
-  // BOM-encoded files, which breaks HTTP headers (bytes must be <= 255).
-  let s = (value ?? '').trim();
-  while (s.charCodeAt(0) === 0xFEFF) s = s.slice(1);
-  return s.trim();
+  if (!value) return '';
+  let result = '';
+  for (let i = 0; i < value.length; i++) {
+    const code = value.charCodeAt(i);
+    if (code >= 32 && code <= 126) result += value[i];
+  }
+  return result;
 }
 
 export async function POST() {
