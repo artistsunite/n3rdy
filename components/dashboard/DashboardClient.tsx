@@ -5,9 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Activity, LayoutDashboard, Zap, Clock, Bell, Sliders, Radio,
   LogOut, ChevronRight, RefreshCw, CheckCircle2, XCircle, Loader2,
-  TrendingUp, Database, Settings, User, AlertTriangle, Play
+  TrendingUp, Database, Settings, User, AlertTriangle, Play, BellRing, BellOff, Smartphone
 } from 'lucide-react';
 import Image from 'next/image';
+import { requestNotificationPermission, onForegroundMessage } from '@/lib/firebase-messaging';
 
 interface DashboardUser {
   name: string;
@@ -17,7 +18,7 @@ interface DashboardUser {
 
 type BotStatus = 'checking' | 'online' | 'offline';
 type ActionStatus = { type: 'success' | 'error' | 'loading'; message: string } | null;
-type View = 'overview' | 'schedule' | 'alerts' | 'weights' | 'sources';
+type View = 'overview' | 'schedule' | 'alerts' | 'weights' | 'sources' | 'notifications';
 
 const BOT_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:8000';
 
@@ -27,6 +28,7 @@ const NAV_ITEMS: { id: View; label: string; icon: React.FC<{ size?: number; clas
   { id: 'alerts', label: 'Alert Settings', icon: Bell },
   { id: 'weights', label: 'Topic Weights', icon: Sliders },
   { id: 'sources', label: 'Sources', icon: Radio },
+  { id: 'notifications', label: 'Notifications', icon: BellRing },
 ];
 
 const MOCK_SOURCES = [
@@ -121,6 +123,42 @@ export default function DashboardClient({ user }: { user: DashboardUser }) {
 
   // Source toggles
   const [sources, setSources] = useState(MOCK_SOURCES);
+
+  // Notifications
+  type NotifStatus = 'default' | 'granted' | 'denied' | 'loading';
+  const [notifStatus, setNotifStatus] = useState<NotifStatus>('default');
+  const [fcmToken, setFcmToken] = useState<string | null>(null);
+  const [liveAlerts, setLiveAlerts] = useState<{ id: number; text: string; time: string }[]>([]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setNotifStatus(Notification.permission as NotifStatus);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (notifStatus !== 'granted') return;
+    onForegroundMessage((payload: unknown) => {
+      const p = payload as { notification?: { title?: string; body?: string } };
+      const text = p.notification?.body || p.notification?.title || 'New market briefing';
+      setLiveAlerts(prev => [{ id: Date.now(), text, time: new Date().toLocaleTimeString() }, ...prev.slice(0, 9)]);
+    });
+  }, [notifStatus]);
+
+  const enableNotifications = async () => {
+    setNotifStatus('loading');
+    try {
+      const token = await requestNotificationPermission();
+      if (token) {
+        setFcmToken(token);
+        setNotifStatus('granted');
+      } else {
+        setNotifStatus(Notification.permission as NotifStatus);
+      }
+    } catch {
+      setNotifStatus('denied');
+    }
+  };
 
   const checkBotStatus = useCallback(async () => {
     try {
@@ -621,6 +659,100 @@ export default function DashboardClient({ user }: { user: DashboardUser }) {
                         </tbody>
                       </table>
                     </div>
+                  </Card>
+                </div>
+              )}
+
+              {/* ── NOTIFICATIONS ── */}
+              {activeView === 'notifications' && (
+                <div className="space-y-6 max-w-2xl">
+                  <Card>
+                    <SectionHeader
+                      title="Browser Push Notifications"
+                      subtitle="Receive instant alerts when N3RDY posts a market briefing or detects a breaking event."
+                    />
+
+                    {notifStatus === 'granted' ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-n3-success/30 bg-n3-success/10">
+                          <CheckCircle2 size={16} className="text-n3-success" />
+                          <span className="text-sm font-medium text-n3-success">Push notifications enabled</span>
+                        </div>
+
+                        {fcmToken && (
+                          <div className="space-y-2">
+                            <p className="text-xs font-mono font-semibold text-n3-muted uppercase tracking-widest">FCM Device Token</p>
+                            <div className="flex gap-2">
+                              <code className="flex-1 text-[11px] font-mono text-n3-muted bg-n3-bg border border-n3-border rounded-lg px-3 py-2 break-all">
+                                {fcmToken}
+                              </code>
+                              <button
+                                onClick={() => navigator.clipboard.writeText(fcmToken)}
+                                className="px-3 py-2 text-xs border border-n3-border rounded-lg text-n3-muted hover:text-n3-primary hover:border-n3-primary/40 transition-all"
+                              >
+                                Copy
+                              </button>
+                            </div>
+                            <p className="text-xs text-n3-muted">Add this token to your bot&apos;s <code className="bg-n3-border/50 px-1 rounded">.env</code> as <code className="bg-n3-border/50 px-1 rounded">WEB_PUSH_TOKEN</code> to receive briefing alerts.</p>
+                          </div>
+                        )}
+                      </div>
+                    ) : notifStatus === 'denied' ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-n3-danger/30 bg-n3-danger/10">
+                          <BellOff size={16} className="text-n3-danger" />
+                          <span className="text-sm font-medium text-n3-danger">Notifications blocked in browser</span>
+                        </div>
+                        <p className="text-sm text-n3-muted">To enable: click the lock icon in your browser address bar → Notifications → Allow.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex items-start gap-4 p-4 rounded-xl border border-n3-border bg-n3-bg">
+                          <div className="w-10 h-10 rounded-xl bg-n3-primary/10 border border-n3-primary/20 flex items-center justify-center flex-shrink-0">
+                            <Smartphone size={18} className="text-n3-primary" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-semibold text-n3-text mb-1">Get instant market alerts</div>
+                            <div className="text-xs text-n3-muted leading-relaxed">
+                              N3RDY will push a notification to this browser whenever a new briefing is generated or a breaking market event is detected — even when the tab is closed.
+                            </div>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={enableNotifications}
+                          disabled={notifStatus === 'loading'}
+                          className="flex items-center gap-2.5 px-5 py-3 bg-n3-primary text-n3-bg font-bold rounded-xl hover:bg-n3-primary/90 transition-all shadow-glow-sm disabled:opacity-50 text-sm"
+                        >
+                          {notifStatus === 'loading' ? <Loader2 size={15} className="animate-spin" /> : <BellRing size={15} />}
+                          Enable Push Notifications
+                        </button>
+                      </div>
+                    )}
+                  </Card>
+
+                  {/* Live alert feed */}
+                  <Card>
+                    <div className="flex items-center justify-between mb-4">
+                      <SectionHeader title="Live Alert Feed" subtitle="Foreground notifications received this session." />
+                    </div>
+                    {liveAlerts.length === 0 ? (
+                      <div className="text-center py-8 text-n3-muted text-sm">
+                        No alerts yet — alerts appear here when the bot sends a briefing.
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {liveAlerts.map(alert => (
+                          <div key={alert.id} className="flex items-start gap-3 px-3 py-2.5 rounded-xl border border-n3-border bg-n3-bg">
+                            <span className="w-1.5 h-1.5 rounded-full bg-n3-success mt-1.5 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-n3-text">{alert.text}</p>
+                              <p className="text-[11px] text-n3-muted font-mono mt-0.5">{alert.time}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </Card>
                 </div>
               )}

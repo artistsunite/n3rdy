@@ -61,6 +61,12 @@ env:
       - BUILD
       - RUNTIME
 
+  - variable: NEXT_PUBLIC_FIREBASE_VAPID_KEY
+    value: BF2b3tUaI52aOtYWKBTNstwiOoAal2OPMDf6uUUux9vIav7FoHqC3_zmtEoC1_IetD_caCFxRYCLK7uTSQj50fo
+    availability:
+      - BUILD
+      - RUNTIME
+
   - variable: NEXTAUTH_SECRET
     secret: NEXTAUTH_SECRET
     availability:
