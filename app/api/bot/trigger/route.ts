@@ -1,17 +1,11 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { getUserBotConfig } from '@/lib/firestore-admin';
 
 export async function POST() {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const uid = session.user.id;
-  const cfg = await getUserBotConfig(uid);
-
-  if (!cfg.telegramBotToken || !cfg.telegramChatId) {
-    return NextResponse.json({ error: 'Telegram not configured' }, { status: 422 });
-  }
 
   const botUrl = process.env.BOT_SERVICE_URL;
   if (!botUrl) return NextResponse.json({ error: 'Bot service not configured' }, { status: 503 });

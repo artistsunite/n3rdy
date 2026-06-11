@@ -6,6 +6,7 @@ import Image from 'next/image';
 import {
   Activity, Bell, BarChart2, Rss, Power, Send,
   ChevronRight, CheckCircle2, AlertCircle, Loader2, LogOut, Save,
+  Newspaper, Settings, RefreshCw, Circle,
 } from 'lucide-react';
 
 interface BotConfig {
@@ -23,9 +24,18 @@ interface BotStatus {
   botOnline: boolean;
   isActive: boolean;
   configured: boolean;
+  telegramEnabled?: boolean;
   lastBriefingAt: string | null;
   nextBriefingAt: string | null;
   intervalMinutes: number;
+}
+
+interface Briefing {
+  id: string;
+  text: string;
+  htmlText?: string;
+  createdAt: string;
+  read: boolean;
 }
 
 const DEFAULT_CONFIG: BotConfig = {
@@ -62,36 +72,56 @@ const WEIGHT_LABELS: Record<string, string> = {
   commodities: 'Commodities',
 };
 
-const VIEWS = ['Overview', 'Telegram', 'Schedule', 'Topics', 'Sources'] as const;
-type View = typeof VIEWS[number];
-
-const VIEW_ICONS: Record<View, React.ReactNode> = {
-  Overview: <BarChart2 size={15} />,
-  Telegram: <Send size={15} />,
-  Schedule: <Bell size={15} />,
-  Topics: <Activity size={15} />,
-  Sources: <Rss size={15} />,
-};
+const MAIN_VIEWS = ['Briefings', 'Overview'] as const;
+const SETTINGS_VIEWS = ['Telegram', 'Schedule', 'Topics', 'Sources'] as const;
+type MainView = typeof MAIN_VIEWS[number];
+type SettingsView = typeof SETTINGS_VIEWS[number];
+type View = MainView | SettingsView | 'Settings';
 
 function fmt(iso: string | null): string {
   if (!iso) return '—';
   return new Date(iso).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
 }
 
+function relTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
 export default function DashboardClient() {
   const { data: session } = useSession();
-  const [view, setView] = useState<View>('Overview');
+  const [view, setView] = useState<View>('Briefings');
   const [config, setConfig] = useState<BotConfig>(DEFAULT_CONFIG);
   const [status, setStatus] = useState<BotStatus | null>(null);
+  const [briefings, setBriefings] = useState<Briefing[]>([]);
+  const [briefingsLoading, setBriefingsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [triggering, setTriggering] = useState(false);
+  const [expandedBriefing, setExpandedBriefing] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
   const showToast = (msg: string, ok = true) => {
     setToast({ msg, ok });
     setTimeout(() => setToast(null), 3500);
   };
+
+  const loadBriefings = useCallback(async () => {
+    setBriefingsLoading(true);
+    try {
+      const res = await fetch('/api/briefings?limit=20');
+      if (res.ok) {
+        const data = await res.json();
+        setBriefings(data.briefings ?? []);
+      }
+    } catch { /* silent */ }
+    finally { setBriefingsLoading(false); }
+  }, []);
 
   const loadData = useCallback(async () => {
     try {
@@ -105,7 +135,27 @@ export default function DashboardClient() {
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+    loadBriefings();
+  }, [loadData, loadBriefings]);
+
+  const markRead = async (id: string) => {
+    setBriefings(bs => bs.map(b => b.id === id ? { ...b, read: true } : b));
+    try {
+      await fetch('/api/briefings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+    } catch { /* silent */ }
+  };
+
+  const expandBriefing = (id: string) => {
+    setExpandedBriefing(prev => prev === id ? null : id);
+    const briefing = briefings.find(b => b.id === id);
+    if (briefing && !briefing.read) markRead(id);
+  };
 
   const save = async (patch: Partial<BotConfig>) => {
     setSaving(true);
@@ -127,8 +177,13 @@ export default function DashboardClient() {
     setTriggering(true);
     try {
       const res = await fetch('/api/bot/trigger', { method: 'POST' });
-      if (res.ok) { showToast('Briefing sent to Telegram!'); await loadData(); }
-      else { const d = await res.json(); showToast(d.error || 'Failed', false); }
+      if (res.ok) {
+        showToast('Briefing generated!');
+        await Promise.all([loadData(), loadBriefings()]);
+      } else {
+        const d = await res.json();
+        showToast(d.error || 'Failed', false);
+      }
     } catch { showToast('Failed to reach bot', false); }
     finally { setTriggering(false); }
   };
@@ -141,7 +196,8 @@ export default function DashboardClient() {
     );
   }
 
-  const isConfigured = !!(config.telegramBotToken && config.telegramChatId);
+  const unreadCount = briefings.filter(b => !b.read).length;
+  const isSettingsView = (SETTINGS_VIEWS as readonly string[]).includes(view);
 
   return (
     <div className="min-h-screen bg-black text-white flex">
@@ -152,18 +208,18 @@ export default function DashboardClient() {
           <span className="font-semibold tracking-wide text-sm">N3RDY</span>
         </div>
 
-        {VIEWS.map(v => (
-          <button
-            key={v}
-            onClick={() => setView(v)}
-            className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left w-full ${
-              view === v ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            {VIEW_ICONS[v]}
-            {v}
-          </button>
-        ))}
+        {/* Main nav */}
+        <NavItem icon={<Newspaper size={15} />} label="Briefings" active={view === 'Briefings'} badge={unreadCount} onClick={() => setView('Briefings')} />
+        <NavItem icon={<BarChart2 size={15} />} label="Overview" active={view === 'Overview'} onClick={() => setView('Overview')} />
+
+        {/* Settings group */}
+        <div className="mt-3 mb-1 px-3">
+          <p className="text-white/20 text-[10px] uppercase tracking-widest">Settings</p>
+        </div>
+        <NavItem icon={<Send size={15} />} label="Telegram" active={view === 'Telegram'} onClick={() => setView('Telegram')} />
+        <NavItem icon={<Bell size={15} />} label="Schedule" active={view === 'Schedule'} onClick={() => setView('Schedule')} />
+        <NavItem icon={<Activity size={15} />} label="Topics" active={view === 'Topics'} onClick={() => setView('Topics')} />
+        <NavItem icon={<Rss size={15} />} label="Sources" active={view === 'Sources'} onClick={() => setView('Sources')} />
 
         <div className="mt-auto pt-4 border-t border-white/5 px-3">
           {session?.user?.image && (
@@ -192,16 +248,99 @@ export default function DashboardClient() {
           </div>
         )}
 
+        {/* Briefings */}
+        {view === 'Briefings' && (
+          <div className="max-w-2xl">
+            <div className="flex items-center justify-between mb-1">
+              <h1 className="text-2xl font-semibold">Briefings</h1>
+              <button
+                onClick={loadBriefings}
+                disabled={briefingsLoading}
+                className="text-white/30 hover:text-white/60 transition-colors p-1"
+                title="Refresh"
+              >
+                <RefreshCw size={15} className={briefingsLoading ? 'animate-spin' : ''} />
+              </button>
+            </div>
+            <p className="text-white/40 text-sm mb-8">Your intelligence feed — updated every {config.intervalMinutes} min.</p>
+
+            {!config.isActive && (
+              <div className="border border-white/10 rounded-2xl p-5 mb-6 flex items-start gap-3 text-white/50">
+                <AlertCircle size={17} className="mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-white/70 text-sm mb-1">Briefings paused</p>
+                  <p className="text-xs">Your bot is inactive. Activate it in Overview to start receiving briefings.</p>
+                  <button onClick={() => setView('Overview')} className="mt-2 text-white/50 text-xs flex items-center gap-1 hover:text-white/80 transition-colors">
+                    Go to Overview <ChevronRight size={12} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {briefingsLoading && briefings.length === 0 ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 size={24} className="text-white/20 animate-spin" />
+              </div>
+            ) : briefings.length === 0 ? (
+              <div className="text-center py-16">
+                <Newspaper size={32} className="text-white/10 mx-auto mb-3" />
+                <p className="text-white/30 text-sm">No briefings yet.</p>
+                <p className="text-white/20 text-xs mt-1">Activate your bot and trigger one from Overview.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {briefings.map(b => (
+                  <div
+                    key={b.id}
+                    className={`border rounded-2xl transition-colors cursor-pointer ${
+                      !b.read ? 'border-white/20 bg-white/[0.03]' : 'border-white/8 hover:border-white/15'
+                    }`}
+                    onClick={() => expandBriefing(b.id)}
+                  >
+                    <div className="flex items-start gap-3 px-5 py-4">
+                      <div className="mt-1.5 flex-shrink-0">
+                        {!b.read
+                          ? <Circle size={7} className="fill-white text-white" />
+                          : <Circle size={7} className="text-white/15" />
+                        }
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm leading-relaxed line-clamp-2 ${!b.read ? 'text-white' : 'text-white/60'}`}>
+                          {b.text}
+                        </p>
+                        <p className="text-white/25 text-xs mt-1.5">{relTime(b.createdAt)}</p>
+                      </div>
+                      <ChevronRight
+                        size={15}
+                        className={`text-white/20 flex-shrink-0 mt-1 transition-transform ${expandedBriefing === b.id ? 'rotate-90' : ''}`}
+                      />
+                    </div>
+
+                    {expandedBriefing === b.id && (
+                      <div className="px-5 pb-5 pt-1 border-t border-white/5">
+                        <p className="text-white/70 text-sm leading-relaxed whitespace-pre-wrap">
+                          {b.text}
+                        </p>
+                        <p className="text-white/20 text-xs mt-3">{new Date(b.createdAt).toLocaleString()}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Overview */}
         {view === 'Overview' && (
           <div className="max-w-2xl">
-            <h1 className="text-2xl font-semibold mb-1">Your Bot</h1>
-            <p className="text-white/40 text-sm mb-8">Monitor and control your personal N3RDY intelligence bot.</p>
+            <h1 className="text-2xl font-semibold mb-1">Overview</h1>
+            <p className="text-white/40 text-sm mb-8">Monitor and control your intelligence bot.</p>
 
             <div className="grid grid-cols-2 gap-4 mb-8">
               {[
                 { label: 'Bot Service', value: status?.botOnline ? 'Online' : 'Offline', dot: status?.botOnline ? 'bg-emerald-400' : 'bg-red-400' },
-                { label: 'Your Bot', value: config.isActive && isConfigured ? 'Active' : 'Paused', dot: config.isActive && isConfigured ? 'bg-emerald-400 animate-pulse' : 'bg-white/20' },
+                { label: 'Your Bot', value: config.isActive ? 'Active' : 'Paused', dot: config.isActive ? 'bg-emerald-400 animate-pulse' : 'bg-white/20' },
                 { label: 'Last Briefing', value: fmt(status?.lastBriefingAt ?? null), dot: null },
                 { label: 'Next Briefing', value: fmt(status?.nextBriefingAt ?? null), dot: null },
               ].map(card => (
@@ -215,23 +354,20 @@ export default function DashboardClient() {
               ))}
             </div>
 
-            {!isConfigured && (
-              <div className="border border-amber-500/20 bg-amber-500/5 rounded-2xl p-5 mb-6 flex items-start gap-3">
-                <AlertCircle size={18} className="text-amber-400 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-white font-medium text-sm mb-1">Telegram not connected</p>
-                  <p className="text-white/50 text-xs">Add your Telegram bot token and chat ID to start receiving briefings.</p>
-                  <button onClick={() => setView('Telegram')} className="mt-2 text-amber-400 text-xs flex items-center gap-1 hover:text-amber-300 transition-colors">
-                    Set up Telegram <ChevronRight size={13} />
-                  </button>
-                </div>
+            {briefings.length > 0 && (
+              <div className="border border-white/10 rounded-2xl p-5 mb-6">
+                <p className="text-white/40 text-xs uppercase tracking-widest mb-3">Latest Briefing</p>
+                <p className="text-white/70 text-sm leading-relaxed line-clamp-3">{briefings[0].text}</p>
+                <button onClick={() => setView('Briefings')} className="mt-3 text-white/40 text-xs flex items-center gap-1 hover:text-white/70 transition-colors">
+                  View all briefings <ChevronRight size={12} />
+                </button>
               </div>
             )}
 
             <div className="flex items-center gap-3">
               <button
                 onClick={() => save({ isActive: !config.isActive })}
-                disabled={!isConfigured || saving}
+                disabled={saving}
                 className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-colors ${
                   config.isActive
                     ? 'bg-white/10 text-white hover:bg-white/15'
@@ -244,11 +380,11 @@ export default function DashboardClient() {
 
               <button
                 onClick={triggerBriefing}
-                disabled={!isConfigured || triggering}
+                disabled={triggering}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium border border-white/20 text-white hover:bg-white/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {triggering ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
-                Send Briefing Now
+                Get Briefing Now
               </button>
             </div>
           </div>
@@ -257,8 +393,14 @@ export default function DashboardClient() {
         {/* Telegram */}
         {view === 'Telegram' && (
           <div className="max-w-lg">
-            <h1 className="text-2xl font-semibold mb-1">Telegram Setup</h1>
-            <p className="text-white/40 text-sm mb-8">Connect your own Telegram bot to receive briefings.</p>
+            <h1 className="text-2xl font-semibold mb-1">Telegram</h1>
+            <p className="text-white/40 text-sm mb-2">Optional — briefings always appear in your dashboard feed.</p>
+            <div className="border border-white/8 rounded-xl px-4 py-3 mb-8 flex items-center gap-2">
+              {status?.telegramEnabled
+                ? <><CheckCircle2 size={15} className="text-emerald-400" /><span className="text-white/60 text-sm">Connected — briefings also sent to Telegram</span></>
+                : <><Circle size={15} className="text-white/20" /><span className="text-white/40 text-sm">Not connected — add token below to enable</span></>
+              }
+            </div>
 
             <div className="text-sm text-white/50 bg-white/5 rounded-xl p-4 mb-8 space-y-1.5">
               <p className="text-white/80 font-medium mb-3">How to get your bot token:</p>
@@ -290,14 +432,25 @@ export default function DashboardClient() {
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/20 text-sm outline-none focus:border-white/30 font-mono"
                 />
               </div>
-              <button
-                onClick={() => save({ telegramBotToken: config.telegramBotToken, telegramChatId: config.telegramChatId })}
-                disabled={saving}
-                className="flex items-center gap-2 px-6 py-2.5 bg-white text-black rounded-full text-sm font-medium hover:bg-white/90 transition-colors disabled:opacity-50"
-              >
-                {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-                Save & Connect
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => save({ telegramBotToken: config.telegramBotToken, telegramChatId: config.telegramChatId })}
+                  disabled={saving}
+                  className="flex items-center gap-2 px-6 py-2.5 bg-white text-black rounded-full text-sm font-medium hover:bg-white/90 transition-colors disabled:opacity-50"
+                >
+                  {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+                  Save
+                </button>
+                {(config.telegramBotToken || config.telegramChatId) && (
+                  <button
+                    onClick={() => save({ telegramBotToken: '', telegramChatId: '' })}
+                    disabled={saving}
+                    className="text-white/30 hover:text-white/60 text-sm transition-colors disabled:opacity-50"
+                  >
+                    Disconnect
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -305,8 +458,8 @@ export default function DashboardClient() {
         {/* Schedule */}
         {view === 'Schedule' && (
           <div className="max-w-md">
-            <h1 className="text-2xl font-semibold mb-1">Briefing Schedule</h1>
-            <p className="text-white/40 text-sm mb-8">How often do you want to receive briefings?</p>
+            <h1 className="text-2xl font-semibold mb-1">Schedule</h1>
+            <p className="text-white/40 text-sm mb-8">How often to generate new briefings for your feed.</p>
 
             <div className="grid grid-cols-2 gap-3">
               {INTERVAL_OPTIONS.map(opt => (
@@ -407,5 +560,32 @@ export default function DashboardClient() {
         )}
       </main>
     </div>
+  );
+}
+
+function NavItem({
+  icon, label, active, badge, onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  badge?: number;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left w-full ${
+        active ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white hover:bg-white/5'
+      }`}
+    >
+      {icon}
+      <span className="flex-1">{label}</span>
+      {badge != null && badge > 0 && (
+        <span className="text-[10px] bg-white/20 text-white rounded-full px-1.5 py-0.5 leading-none font-medium">
+          {badge}
+        </span>
+      )}
+    </button>
   );
 }

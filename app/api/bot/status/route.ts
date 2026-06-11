@@ -22,7 +22,8 @@ export async function GET() {
   return NextResponse.json({
     botOnline,
     isActive: cfg.isActive,
-    configured: !!(cfg.telegramBotToken && cfg.telegramChatId),
+    configured: true,
+    telegramEnabled: !!(cfg.telegramBotToken && cfg.telegramChatId),
     lastBriefingAt: cfg.lastBriefingAt,
     nextBriefingAt: cfg.nextBriefingAt,
     intervalMinutes: cfg.intervalMinutes,
