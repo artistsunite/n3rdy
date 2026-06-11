@@ -1,0 +1,31 @@
+{
+  "name": "purple-croc-website",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "export": "next build",
+    "start": "next start",
+    "deploy": "npm run export && firebase deploy --only hosting",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "framer-motion": "^12.40.0",
+    "lucide-react": "^1.17.0",
+    "next": "^16.2.6",
+    "next-auth": "^5.0.0-beta.31",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "recharts": "^3.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.7.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "autoprefixer": "10.4.19",
+    "postcss": "8.4.37",
+    "tailwindcss": "3.4.4",
+    "typescript": "5.5.4"
+  }
+}

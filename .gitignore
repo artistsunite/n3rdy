@@ -1,0 +1,20 @@
+# env — never commit secrets
+.env.local
+.env*.local
+.env
+
+# Next.js
+.next/
+out/
+
+# deps
+node_modules/
+node-v24.15.0-win-x64/
+node-v24.15.0-win-x64.zip
+
+# Claude Code settings
+.claude/
+
+# misc
+.DS_Store
+*.log
