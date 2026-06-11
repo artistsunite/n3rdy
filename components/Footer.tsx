@@ -36,10 +36,13 @@ export default function Footer() {
           )}
         </div>
 
-        {/* Copyright */}
-        <div className="flex items-center gap-2 text-white/20 text-xs">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
-          <span>© 2026 N3RDY</span>
+        {/* Copyright + legal */}
+        <div className="flex flex-col items-start md:items-end gap-2 text-white/20 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
+            <span>© 2026 N3RDY</span>
+          </div>
+          <Link href="/privacy" className="hover:text-white/50 transition-colors">Privacy Policy</Link>
         </div>
       </div>
     </footer>
