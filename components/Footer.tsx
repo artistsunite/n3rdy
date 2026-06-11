@@ -42,7 +42,10 @@ export default function Footer() {
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
             <span>© 2026 N3RDY</span>
           </div>
-          <Link href="/privacy" className="hover:text-white/50 transition-colors">Privacy Policy</Link>
+          <div className="flex items-center gap-4">
+            <Link href="/privacy" className="hover:text-white/50 transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-white/50 transition-colors">Terms of Service</Link>
+          </div>
         </div>
       </div>
     </footer>
