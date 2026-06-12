@@ -50,6 +50,12 @@ env:
     availability:
       - RUNTIME
 
+  # Gemini — fourth fallback (secondary key)
+  - variable: GEMINI_API_KEY_2
+    secret: GEMINI_API_KEY_2
+    availability:
+      - RUNTIME
+
   # Firebase public config
   - variable: NEXT_PUBLIC_FIREBASE_API_KEY
     secret: NEXT_PUBLIC_FIREBASE_API_KEY

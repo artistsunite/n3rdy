@@ -76,31 +76,41 @@ async function callOpenAI(prompt: string, maxTokens: number): Promise<string> {
   return data.choices[0]?.message?.content ?? '';
 }
 
-// Gemini fallback via raw fetch
+// Gemini fallback via raw fetch — tries GEMINI_API_KEY then GEMINI_API_KEY_2
 async function callGemini(prompt: string, maxTokens: number): Promise<string> {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error('GEMINI_API_KEY not set');
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: maxTokens },
-      }),
+  const keys = [process.env.GEMINI_API_KEY, process.env.GEMINI_API_KEY_2].filter(Boolean) as string[];
+  if (keys.length === 0) throw new Error('No GEMINI_API_KEY set');
+
+  let lastErr: Error = new Error('Gemini: no keys available');
+  for (const key of keys) {
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { maxOutputTokens: maxTokens },
+          }),
+        }
+      );
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(
+          (err as { error?: { message?: string } }).error?.message ?? `Gemini HTTP ${res.status}`
+        );
+      }
+      const data = await res.json() as {
+        candidates: Array<{ content: { parts: Array<{ text: string }> } }>;
+      };
+      return data.candidates[0]?.content?.parts[0]?.text ?? '';
+    } catch (err) {
+      console.warn(`[ai] Gemini key failed: ${(err as Error).message}`);
+      lastErr = err as Error;
     }
-  );
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(
-      (err as { error?: { message?: string } }).error?.message ?? `Gemini HTTP ${res.status}`
-    );
   }
-  const data = await res.json() as {
-    candidates: Array<{ content: { parts: Array<{ text: string }> } }>;
-  };
-  return data.candidates[0]?.content?.parts[0]?.text ?? '';
+  throw lastErr;
 }
 
 export async function analyzeArticle(article: {
