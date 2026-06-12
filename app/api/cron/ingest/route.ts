@@ -22,5 +22,21 @@ export async function GET(req: Request) {
     enqueued++;
   }
 
-  return NextResponse.json({ ok: true, enqueued, sourceCount: sources.length });
+  // Auto-validate expired predictions as part of every cron cycle
+  let predictionsValidated = 0;
+  try {
+    const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
+    const rawSecret = process.env.CRON_SECRET ?? '';
+    const secret = (rawSecret.charCodeAt(0) === 0xFEFF ? rawSecret.slice(1) : rawSecret).trim();
+    const vRes = await fetch(`${baseUrl}/api/predictions/validate`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${secret}` },
+    });
+    if (vRes.ok) {
+      const vData = await vRes.json();
+      predictionsValidated = vData.validated ?? 0;
+    }
+  } catch { /* non-fatal */ }
+
+  return NextResponse.json({ ok: true, enqueued, sourceCount: sources.length, predictionsValidated });
 }

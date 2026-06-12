@@ -188,6 +188,206 @@ Return ONLY valid JSON with this exact structure:
   return JSON.parse(extractJSON(text)) as ArticleAnalysisResult;
 }
 
+export interface PredictionSignals {
+  sentiment: number;       // 0–1 from recent article sentiment
+  velocity: number;        // 0–1 from trending topic velocity
+  sourceQuality: number;   // 0–1 weighted by source trustScore
+  calendarContext: number; // 0–1 from upcoming economic events relevance
+}
+
+export interface PredictionSubQuestion {
+  question: string;
+  answer: string;
+  confidence: number; // 0–1
+}
+
+export interface PredictionResult {
+  target: string;
+  targetType: string;
+  direction: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  confidence: number;
+  baseRate: number;
+  contrarianFlag: boolean;
+  reasoning: string;
+  bullCase: string;
+  bearCase: string;
+  signals: PredictionSignals;
+  subQuestions: PredictionSubQuestion[];
+  timeframe: string;
+}
+
+export async function generatePredictions(params: {
+  watchlistItems: Array<{ type: string; value: string; label: string }>;
+  articles: Array<{
+    title: string;
+    shortSummary: string;
+    sentiment: string;
+    sentimentScore: number;
+    bullishBearish: string;
+    marketImpactScore: number;
+    sourceName: string;
+    sourceReliabilityScore: number;
+    publishedAt: string;
+    sectorsAffected: string[];
+  }>;
+  userProfile?: { businessType?: string | null; industry?: string | null };
+  accuracyContext?: string;
+  overallSentimentScore?: number;
+}): Promise<PredictionResult[]> {
+  const { watchlistItems, articles, userProfile, accuracyContext, overallSentimentScore } = params;
+
+  const profileDesc = userProfile?.businessType || userProfile?.industry
+    ? `User profile: ${[userProfile.businessType, userProfile.industry].filter(Boolean).join(', ')}.`
+    : 'User profile: general market watcher.';
+
+  const watchlistDesc = watchlistItems.length > 0
+    ? watchlistItems.map(w => `${w.type}: ${w.label}`).join(', ')
+    : 'No watchlist items set — use top market topics from articles.';
+
+  const recentArticles = articles.slice(0, 15).map((a, i) =>
+    `${i + 1}. [${a.bullishBearish.toUpperCase()} | Score:${(a.marketImpactScore * 10).toFixed(1)}] ${a.title} (${a.sourceName})`
+  ).join('\n');
+
+  const contrarianNote = overallSentimentScore !== undefined && Math.abs(overallSentimentScore) > 0.8
+    ? `CONTRARIAN ALERT: Overall market sentiment is at an extreme (${overallSentimentScore.toFixed(2)}). Flag contrarianFlag:true on all calls in the dominant direction and reduce confidence by 15%.`
+    : '';
+
+  const prompt = `You are an elite market intelligence analyst. Generate 4-6 structured predictions personalised to this user.
+
+${profileDesc}
+Watchlist: ${watchlistDesc}
+
+RECENT NEWS (last 24h):
+${recentArticles}
+
+${accuracyContext || ''}
+${contrarianNote}
+
+For each prediction, score 4 ensemble signals independently (0.0-1.0):
+- sentiment: strength of bullish/bearish signal in recent articles for this target
+- velocity: how fast mentions/discussion is accelerating for this target
+- sourceQuality: average trustworthiness of sources covering this target (0=low, 1=high)
+- calendarContext: relevance of upcoming economic events to this target
+
+Then decompose each call into exactly 3 sub-questions. Answer each with Yes/No/Unclear and a confidence score.
+Synthesise the sub-answers into a final direction.
+
+Always write BOTH a bull case AND bear case, even when direction is BULLISH or BEARISH.
+
+Return ONLY a JSON array:
+[
+  {
+    "target": "BTC",
+    "targetType": "ASSET",
+    "direction": "BULLISH",
+    "confidence": 0.72,
+    "baseRate": 0.58,
+    "contrarianFlag": false,
+    "reasoning": "2-3 sentences explaining the call",
+    "bullCase": "2-3 sentences on the bullish scenario",
+    "bearCase": "2-3 sentences on the bearish scenario",
+    "signals": { "sentiment": 0.75, "velocity": 0.60, "sourceQuality": 0.80, "calendarContext": 0.45 },
+    "subQuestions": [
+      { "question": "Is macro environment supportive?", "answer": "Yes", "confidence": 0.80 },
+      { "question": "Is momentum accelerating?", "answer": "Yes", "confidence": 0.65 },
+      { "question": "Are there near-term catalysts?", "answer": "Unclear", "confidence": 0.50 }
+    ],
+    "timeframe": "7d"
+  }
+]`;
+
+  let text: string;
+  try {
+    const message = await client.messages.create({
+      model: 'claude-opus-4-8',
+      max_tokens: 3000,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    text = message.content[0].type === 'text' ? message.content[0].text : '';
+  } catch (err) {
+    if (isCreditsError(err)) {
+      try { text = await callOpenAI(prompt, 3000); }
+      catch { text = await callGemini(prompt, 3000); }
+    } else { throw err; }
+  }
+
+  const raw = JSON.parse(extractJSON(text));
+  return Array.isArray(raw) ? raw as PredictionResult[] : [raw] as PredictionResult[];
+}
+
+export async function generateFeedbackQuestion(params: {
+  target: string;
+  targetType: string;
+  direction: string;
+  reasoning: string;
+  outcome: string;
+  actualDirection?: string | null;
+}): Promise<string> {
+  const { target, targetType, direction, reasoning, outcome, actualDirection } = params;
+
+  const prompt = `You are a market intelligence analyst reviewing a prediction that turned out ${outcome}.
+
+Prediction: ${target} (${targetType}) would be ${direction}.
+Reasoning given: ${reasoning}
+Actual outcome: ${actualDirection ?? 'unclear'}
+
+Write ONE concise, specific question to ask the user that would help you understand what you missed or got right.
+The question should reference the specific prediction and invite the user to share insight they have that doesn't appear in news articles.
+Keep it under 2 sentences. Return only the question, no preamble.`;
+
+  let text: string;
+  try {
+    const message = await client.messages.create({
+      model: 'claude-opus-4-8',
+      max_tokens: 200,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    text = message.content[0].type === 'text' ? message.content[0].text : '';
+  } catch (err) {
+    if (isCreditsError(err)) {
+      try { text = await callOpenAI(prompt, 200); }
+      catch { text = await callGemini(prompt, 200); }
+    } else { throw err; }
+  }
+
+  return text.trim();
+}
+
+export async function extractFeedbackInsight(params: {
+  question: string;
+  answer: string;
+  target: string;
+  targetType: string;
+}): Promise<string> {
+  const { question, answer, target, targetType } = params;
+
+  const prompt = `A user answered a follow-up question about a market prediction for ${target} (${targetType}).
+
+Question: ${question}
+Answer: ${answer}
+
+Extract a single actionable insight (1-2 sentences) that should be remembered to improve future predictions for this user.
+Format: "User [observation] — [how to apply this in future predictions]."
+Return only the insight, no preamble.`;
+
+  let text: string;
+  try {
+    const message = await client.messages.create({
+      model: 'claude-opus-4-8',
+      max_tokens: 150,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    text = message.content[0].type === 'text' ? message.content[0].text : '';
+  } catch (err) {
+    if (isCreditsError(err)) {
+      try { text = await callOpenAI(prompt, 150); }
+      catch { text = await callGemini(prompt, 150); }
+    } else { throw err; }
+  }
+
+  return text.trim();
+}
+
 export async function generateBriefing(params: {
   userId: string;
   articles: Array<{

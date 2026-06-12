@@ -15,12 +15,14 @@ model User {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  preferences   UserPreferences?
-  userSources   UserSource[]
-  watchlist     WatchlistItem[]
-  briefings     Briefing[]
-  alerts        Alert[]
-  notifications Notification[]
+  preferences         UserPreferences?
+  userSources         UserSource[]
+  watchlist           WatchlistItem[]
+  briefings           Briefing[]
+  alerts              Alert[]
+  notifications       Notification[]
+  predictions         Prediction[]
+  predictionAccuracy  PredictionAccuracy[]
 }
 
 model UserPreferences {
@@ -225,4 +227,71 @@ model Notification {
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([read])
+}
+
+model Prediction {
+  id                   String   @id @default(cuid())
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  target               String
+  targetType           String                   // ASSET | SECTOR | COMPANY | KEYWORD | INDUSTRY
+  direction            String                   // BULLISH | BEARISH | NEUTRAL
+  confidence           Float
+  calibratedConfidence Float?
+  baseRate             Float?
+  contrarianFlag       Boolean  @default(false)
+  reasoning            String   @db.Text
+  bullCase             String?  @db.Text
+  bearCase             String?  @db.Text
+  signals              Json?    // { sentiment, velocity, sourceQuality, calendarContext }
+  subQuestions         Json?    // [{ question, answer, confidence }]
+  timeframe            String   @default("7d")  // 24h | 7d | 30d
+  expiresAt            DateTime
+  status               String   @default("PENDING") // PENDING | CORRECT | INCORRECT | PARTIAL
+  aiProvider           String   @default("claude")
+  generatedAt          DateTime @default(now())
+
+  outcome  PredictionOutcome?
+  feedback PredictionFeedback[]
+
+  @@index([userId, status])
+  @@index([expiresAt])
+}
+
+model PredictionOutcome {
+  id              String     @id @default(cuid())
+  predictionId    String     @unique
+  prediction      Prediction @relation(fields: [predictionId], references: [id], onDelete: Cascade)
+  outcome         String                   // CORRECT | INCORRECT | PARTIAL
+  actualDirection String?
+  validatedBy     String                   // AUTO | USER
+  userNotes       String?    @db.Text
+  validatedAt     DateTime   @default(now())
+}
+
+model PredictionFeedback {
+  id           String     @id @default(cuid())
+  predictionId String
+  prediction   Prediction @relation(fields: [predictionId], references: [id], onDelete: Cascade)
+  question     String     @db.Text
+  answer       String?    @db.Text
+  insight      String?    @db.Text
+  createdAt    DateTime   @default(now())
+  answeredAt   DateTime?
+
+  @@index([predictionId])
+}
+
+model PredictionAccuracy {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetType       String
+  confidenceBucket String                   // "0.5" | "0.6" | "0.7" | "0.8" | "0.9"
+  totalPredictions Int      @default(0)
+  correct          Int      @default(0)
+  hitRate          Float?
+  updatedAt        DateTime @updatedAt
+
+  @@unique([userId, targetType, confidenceBucket])
 }

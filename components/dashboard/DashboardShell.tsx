@@ -19,6 +19,7 @@ import {
   Menu,
   X,
   Zap,
+  Target,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -27,6 +28,7 @@ const NAV_ITEMS = [
   { href: '/dashboard/trending', icon: TrendingUp, label: 'Trending' },
   { href: '/dashboard/sentiment', icon: BarChart2, label: 'Sentiment' },
   { href: '/dashboard/briefings', icon: FileText, label: 'Briefings' },
+  { href: '/dashboard/predictions', icon: Target, label: 'Predictions' },
   { href: '/dashboard/sources', icon: Rss, label: 'Sources' },
   { href: '/dashboard/watchlist', icon: Star, label: 'Watchlist' },
   { href: '/dashboard/calendar', icon: Calendar, label: 'Calendar' },
