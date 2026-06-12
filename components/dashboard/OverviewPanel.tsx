@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { TrendingUp, TrendingDown, Minus, Zap, AlertTriangle, FileText } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { TrendingUp, TrendingDown, Minus, Zap, AlertTriangle, FileText, RefreshCw, Loader2 } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts';
@@ -9,12 +9,7 @@ import ArticleCard from './ArticleCard';
 
 interface SentimentData {
   overall: number;
-  byCategory: Array<{
-    category: string;
-    avgScore: number;
-    articleCount: number;
-    dominant: string;
-  }>;
+  byCategory: Array<{ category: string; avgScore: number; articleCount: number; dominant: string }>;
   timeSeries: Array<{ time: string; avgScore: number; count: number }>;
 }
 
@@ -36,21 +31,63 @@ interface Article {
   } | null;
 }
 
+type IngestState = 'idle' | 'fetching' | 'analysing' | 'done' | 'error';
+
 export default function OverviewPanel() {
   const [sentiment, setSentiment] = useState<SentimentData | null>(null);
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  useEffect(() => {
-    Promise.all([
+  const [ingestState, setIngestState] = useState<IngestState>('idle');
+  const [ingestResult, setIngestResult] = useState<{ articlesIngested: number; articlesAnalyzed: number } | null>(null);
+  const [ingestError, setIngestError] = useState<string | null>(null);
+
+  const loadData = useCallback(async () => {
+    const [s, a] = await Promise.all([
       fetch('/api/sentiment').then((r) => r.json()),
       fetch('/api/articles?limit=6').then((r) => r.json()),
-    ]).then(([s, a]) => {
-      setSentiment(s);
-      setArticles(a.articles ?? []);
-      setLoading(false);
-    });
+    ]);
+    setSentiment(s);
+    setArticles(a.articles ?? []);
+    setLastUpdated(new Date());
+    return (a.articles ?? []).length as number;
   }, []);
+
+  const runIngest = useCallback(async () => {
+    setIngestState('fetching');
+    setIngestError(null);
+    try {
+      // Give user visual feedback that we're in the fetching phase
+      const timer = setTimeout(() => setIngestState('analysing'), 12000);
+      const res = await fetch('/api/ingest/run', { method: 'POST' });
+      clearTimeout(timer);
+      if (!res.ok) throw new Error(`Ingest failed: ${res.status}`);
+      const data = await res.json();
+      setIngestResult({ articlesIngested: data.articlesIngested, articlesAnalyzed: data.articlesAnalyzed });
+      setIngestState('done');
+      // Reload data with fresh articles
+      await loadData();
+    } catch (err) {
+      setIngestError((err as Error).message);
+      setIngestState('error');
+    }
+  }, [loadData]);
+
+  useEffect(() => {
+    loadData().then((count) => {
+      setLoading(false);
+      // Auto-bootstrap on first visit when DB has no articles yet
+      if (count === 0) runIngest();
+    });
+  }, [loadData, runIngest]);
+
+  const refresh = async () => {
+    setIngestState('idle');
+    setIngestResult(null);
+    await runIngest();
+    setLoading(false);
+  };
 
   const overallSentiment = sentiment?.overall ?? 0;
   const SentimentIcon = overallSentiment > 0.1 ? TrendingUp : overallSentiment < -0.1 ? TrendingDown : Minus;
@@ -62,13 +99,84 @@ export default function OverviewPanel() {
     count: d.count,
   }));
 
+  const isIngesting = ingestState === 'fetching' || ingestState === 'analysing';
+
+  // ── First-time setup screen ──────────────────────────────────────────────
+  if (!loading && articles.length === 0 && isIngesting) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center px-4">
+        <div className="w-16 h-16 bg-n3-primary/10 rounded-2xl flex items-center justify-center">
+          <Loader2 size={32} className="text-n3-primary animate-spin" />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-n3-text mb-2">Setting up your intelligence feed</h2>
+          <p className="text-n3-muted text-sm max-w-sm">
+            {ingestState === 'fetching'
+              ? 'Fetching the latest news from your sources…'
+              : 'Running AI analysis on top stories — this takes about 30 seconds…'}
+          </p>
+        </div>
+        <div className="flex gap-2 text-xs text-n3-muted">
+          <span className={`px-2 py-1 rounded-full ${ingestState === 'fetching' ? 'bg-n3-primary/20 text-n3-primary' : 'bg-white/5'}`}>1. Fetching RSS</span>
+          <span className={`px-2 py-1 rounded-full ${ingestState === 'analysing' ? 'bg-n3-primary/20 text-n3-primary' : 'bg-white/5'}`}>2. AI Analysis</span>
+          <span className="px-2 py-1 rounded-full bg-white/5">3. Ready</span>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Error screen ─────────────────────────────────────────────────────────
+  if (!loading && articles.length === 0 && ingestState === 'error') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-4">
+        <AlertTriangle size={36} className="text-n3-warning" />
+        <div>
+          <h2 className="text-xl font-bold text-n3-text mb-2">Feed initialisation failed</h2>
+          <p className="text-n3-muted text-sm max-w-sm mb-1">{ingestError}</p>
+          <p className="text-n3-muted text-xs max-w-sm">Check that your API keys (ANTHROPIC_API_KEY, DATABASE_URL) are set in Secret Manager.</p>
+        </div>
+        <button
+          onClick={refresh}
+          className="inline-flex items-center gap-2 bg-n3-primary text-n3-bg px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-n3-primary/90 transition-colors"
+        >
+          <RefreshCw size={14} /> Try again
+        </button>
+      </div>
+    );
+  }
+
+  // ── Normal dashboard ─────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
-      {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold text-n3-text">Intelligence Overview</h1>
-        <p className="text-n3-muted text-sm mt-1">Last 24 hours across your monitored sources</p>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-n3-text">Intelligence Overview</h1>
+          <p className="text-n3-muted text-sm mt-1">
+            {lastUpdated
+              ? `Updated ${lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+              : 'Last 24 hours across your monitored sources'}
+          </p>
+        </div>
+        <button
+          onClick={refresh}
+          disabled={isIngesting}
+          className="inline-flex items-center gap-2 border border-n3-border text-n3-muted hover:text-n3-text hover:border-n3-primary/40 px-4 py-2 rounded-lg text-sm transition-colors disabled:opacity-50 flex-shrink-0"
+        >
+          {isIngesting
+            ? <Loader2 size={14} className="animate-spin" />
+            : <RefreshCw size={14} />}
+          {isIngesting ? (ingestState === 'fetching' ? 'Fetching…' : 'Analysing…') : 'Refresh feed'}
+        </button>
       </div>
+
+      {/* Ingest result banner */}
+      {ingestState === 'done' && ingestResult && (
+        <div className="bg-n3-success/10 border border-n3-success/30 rounded-lg px-4 py-3 text-sm text-n3-success flex items-center gap-2">
+          <Zap size={14} />
+          Feed refreshed — {ingestResult.articlesIngested} articles fetched, {ingestResult.articlesAnalyzed} AI-analysed
+        </div>
+      )}
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -81,7 +189,7 @@ export default function OverviewPanel() {
         />
         <StatCard
           label="Articles Analysed"
-          value={articles.length > 0 ? sentiment?.byCategory.reduce((a, b) => a + b.articleCount, 0)?.toString() ?? '0' : '0'}
+          value={sentiment?.byCategory.reduce((a, b) => a + b.articleCount, 0)?.toString() ?? '0'}
           sub="past 24h"
           icon={<FileText size={16} className="text-n3-primary" />}
           loading={loading}
@@ -145,14 +253,17 @@ export default function OverviewPanel() {
           <h2 className="text-sm font-semibold text-n3-text">Top Stories</h2>
           <a href="/dashboard/news" className="text-xs text-n3-primary hover:underline">View all</a>
         </div>
-        {loading ? (
+        {loading || isIngesting ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-24 bg-n3-card border border-n3-border rounded-xl animate-pulse" />
             ))}
           </div>
         ) : articles.length === 0 ? (
-          <EmptyState message="No articles yet. Add sources and trigger an ingest." />
+          <div className="bg-n3-card border border-dashed border-n3-border rounded-xl p-8 text-center">
+            <p className="text-n3-muted text-sm mb-3">No analysed articles yet.</p>
+            <button onClick={refresh} className="text-xs text-n3-primary hover:underline">Run ingest now</button>
+          </div>
         ) : (
           <div className="space-y-3">
             {articles.map((a) => (
@@ -195,14 +306,6 @@ function StatCard({ label, value, sub, icon, loading }: {
           <div className="text-xs text-n3-muted mt-0.5">{sub}</div>
         </>
       )}
-    </div>
-  );
-}
-
-function EmptyState({ message }: { message: string }) {
-  return (
-    <div className="bg-n3-card border border-dashed border-n3-border rounded-xl p-8 text-center">
-      <p className="text-n3-muted text-sm">{message}</p>
     </div>
   );
 }
