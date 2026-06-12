@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
   const category = searchParams.get('category');
   const sentiment = searchParams.get('sentiment');
   const minImpact = parseFloat(searchParams.get('minImpact') ?? '0');
+  const analysedOnly = searchParams.get('analysedOnly') === 'true';
 
   const userSources = await db.userSource.findMany({
     where: { userId: uid, isActive: true },
@@ -20,21 +21,28 @@ export async function GET(req: NextRequest) {
   });
   const sourceIds = userSources.map((us) => us.sourceId);
 
-  const where: Record<string, unknown> = {
-    sourceId: { in: sourceIds },
-    analysis: { isNot: null },
-  };
+  if (sourceIds.length === 0) {
+    return NextResponse.json({ articles: [], total: 0, limit, offset });
+  }
+
+  // Build where clause — analysis is optional unless explicitly filtered
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const where: any = { sourceId: { in: sourceIds } };
+
+  if (analysedOnly) {
+    where.analysis = { isNot: null };
+  }
 
   if (category) {
     where.source = { category };
   }
 
-  if (sentiment) {
-    where.analysis = { sentiment };
+  if (sentiment && sentiment !== 'all') {
+    where.analysis = { ...(where.analysis ?? {}), sentiment };
   }
 
   if (minImpact > 0) {
-    where.analysis = { ...(where.analysis as object), marketImpactScore: { gte: minImpact } };
+    where.analysis = { ...(where.analysis ?? {}), marketImpactScore: { gte: minImpact } };
   }
 
   const [articles, total] = await Promise.all([
@@ -56,7 +64,9 @@ export async function GET(req: NextRequest) {
           },
         },
       },
-      orderBy: [{ analysis: { marketImpactScore: 'desc' } }, { publishedAt: 'desc' }],
+      orderBy: [
+        { publishedAt: 'desc' },
+      ],
       take: limit,
       skip: offset,
     }),

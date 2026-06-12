@@ -5,7 +5,7 @@ import { analyzeArticle } from '@/lib/ai';
 import RSSParser from 'rss-parser';
 import crypto from 'crypto';
 
-const parser = new RSSParser({ timeout: 10000 });
+const parser = new RSSParser({ requestOptions: { timeout: 10000 } });
 
 interface RawSource {
   id: string;
