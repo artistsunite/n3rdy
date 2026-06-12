@@ -7,7 +7,9 @@ import path from 'path';
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const secret = searchParams.get('secret');
-  const cronSecret = process.env.CRON_SECRET;
+  // Strip UTF-8 BOM (U+FEFF) that GCP Secret Manager injects, then trim whitespace
+  const rawSecret = process.env.CRON_SECRET ?? '';
+  const cronSecret = (rawSecret.charCodeAt(0) === 0xFEFF ? rawSecret.slice(1) : rawSecret).trim();
 
   if (!cronSecret || secret !== cronSecret) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
