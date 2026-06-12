@@ -76,6 +76,33 @@ async function callOpenAI(prompt: string, maxTokens: number): Promise<string> {
   return data.choices[0]?.message?.content ?? '';
 }
 
+// Gemini fallback via raw fetch
+async function callGemini(prompt: string, maxTokens: number): Promise<string> {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new Error('GEMINI_API_KEY not set');
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: maxTokens },
+      }),
+    }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(
+      (err as { error?: { message?: string } }).error?.message ?? `Gemini HTTP ${res.status}`
+    );
+  }
+  const data = await res.json() as {
+    candidates: Array<{ content: { parts: Array<{ text: string }> } }>;
+  };
+  return data.candidates[0]?.content?.parts[0]?.text ?? '';
+}
+
 export async function analyzeArticle(article: {
   title: string;
   summary?: string | null;
@@ -121,8 +148,13 @@ Return ONLY valid JSON with this exact structure:
     text = message.content[0].type === 'text' ? message.content[0].text : '';
   } catch (err) {
     if (isCreditsError(err)) {
-      console.warn('[ai] Claude credits exhausted — falling back to OpenAI for article analysis');
-      text = await callOpenAI(prompt, 1024);
+      console.warn('[ai] Claude unavailable — trying OpenAI for article analysis');
+      try {
+        text = await callOpenAI(prompt, 1024);
+      } catch (openaiErr) {
+        console.warn('[ai] OpenAI unavailable — trying Gemini for article analysis');
+        text = await callGemini(prompt, 1024);
+      }
     } else {
       throw err;
     }
@@ -211,8 +243,13 @@ Return ONLY valid JSON with this exact structure:
     text = message.content[0].type === 'text' ? message.content[0].text : '';
   } catch (err) {
     if (isCreditsError(err)) {
-      console.warn('[ai] Claude credits exhausted — falling back to OpenAI for briefing generation');
-      text = await callOpenAI(prompt, 2048);
+      console.warn('[ai] Claude unavailable — trying OpenAI for briefing generation');
+      try {
+        text = await callOpenAI(prompt, 2048);
+      } catch (openaiErr) {
+        console.warn('[ai] OpenAI unavailable — trying Gemini for briefing generation');
+        text = await callGemini(prompt, 2048);
+      }
     } else {
       throw err;
     }
