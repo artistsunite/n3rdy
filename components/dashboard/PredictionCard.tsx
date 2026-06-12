@@ -34,7 +34,7 @@ export interface PredictionData {
   timeframe: string;
   expiresAt: string;
   status: string;
-  outcome?: { outcome: string; actualDirection: string | null; validatedBy: string } | null;
+  outcome?: { outcome: string; actualDirection: string | null; validatedBy: string; userNotes?: string | null } | null;
   feedback?: Array<{ id: string; question: string; answer: string | null }>;
 }
 
