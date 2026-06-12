@@ -29,29 +29,18 @@ export default function Home() {
   return (
     <div className="relative overflow-x-hidden bg-black" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
 
-      {/* ── Fixed animated background ── */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute inset-0 bg-black" />
-        <div
-          className="absolute top-1/4 left-1/4 w-[700px] h-[700px] rounded-full opacity-[0.12]"
-          style={{ background: 'radial-gradient(circle, rgba(0,229,255,0.5) 0%, transparent 70%)', animation: 'float 10s ease-in-out infinite' }}
-        />
-        <div
-          className="absolute bottom-1/3 right-1/4 w-[500px] h-[500px] rounded-full opacity-[0.08]"
-          style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.6) 0%, transparent 70%)', animation: 'float 14s ease-in-out infinite reverse' }}
-        />
-        <div
-          className="absolute top-2/3 left-1/2 w-[400px] h-[400px] rounded-full opacity-[0.06]"
-          style={{ background: 'radial-gradient(circle, rgba(0,229,255,0.4) 0%, transparent 70%)', animation: 'float 18s ease-in-out infinite' }}
-        />
-        <div
-          className="absolute inset-0 opacity-[0.025]"
-          style={{
-            backgroundImage: 'linear-gradient(rgba(0,229,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,1) 1px, transparent 1px)',
-            backgroundSize: '80px 80px',
-          }}
-        />
-      </div>
+      {/* ── Fixed video background ── */}
+      <video
+        src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260315_073750_51473149-4350-4920-ae24-c8214286f323.mp4"
+        className="fixed inset-0 w-full h-full object-cover object-bottom z-0"
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+      />
+      {/* Subtle cyan tint overlay so N3RDY palette reads through */}
+      <div className="fixed inset-0 z-0 pointer-events-none" style={{ background: 'rgba(0,0,0,0.35)' }} />
 
       {/* ══════════════════════════════════════
           HERO — Two-panel full screen
