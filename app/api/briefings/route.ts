@@ -123,27 +123,38 @@ export async function POST(req: NextRequest) {
 
   const preferences = await db.userPreferences.findUnique({ where: { userId: uid } }).catch(() => null);
 
-  const content = await generateBriefing({
-    userId: uid,
-    articles: articles.map((a) => ({
-      title: a.title,
-      shortSummary: a.analysis!.shortSummary,
-      sentiment: a.analysis!.sentiment,
-      marketImpactScore: a.analysis!.marketImpactScore,
-      sourceName: a.source.name,
-      publishedAt: a.publishedAt.toISOString(),
-      sectorsAffected: (a.analysis!.sectorsAffected as string[]) ?? [],
-      bullishBearish: a.analysis!.bullishBearish,
-    })),
-    preferences: preferences
-      ? {
-          briefingStyle: preferences.briefingStyle,
-          enabledCategories: preferences.enabledCategories ?? undefined,
-          businessType: preferences.businessType ?? undefined,
-          industry: preferences.industry ?? undefined,
-        }
-      : undefined,
-  });
+  let content;
+  try {
+    content = await generateBriefing({
+      userId: uid,
+      articles: articles.map((a) => ({
+        title: a.title,
+        shortSummary: a.analysis!.shortSummary,
+        sentiment: a.analysis!.sentiment,
+        marketImpactScore: a.analysis!.marketImpactScore,
+        sourceName: a.source.name,
+        publishedAt: a.publishedAt.toISOString(),
+        sectorsAffected: (a.analysis!.sectorsAffected as string[]) ?? [],
+        bullishBearish: a.analysis!.bullishBearish,
+      })),
+      preferences: preferences
+        ? {
+            briefingStyle: preferences.briefingStyle,
+            enabledCategories: preferences.enabledCategories ?? undefined,
+            businessType: preferences.businessType ?? undefined,
+            industry: preferences.industry ?? undefined,
+          }
+        : undefined,
+    });
+  } catch (aiErr) {
+    const msg = (aiErr as Error).message ?? '';
+    const friendly = msg.includes('credit balance')
+      ? 'Anthropic API credits exhausted. Add credits at console.anthropic.com → Billing.'
+      : msg.includes('invalid_api_key') || msg.includes('authentication')
+      ? 'Anthropic API key is invalid. Check the ANTHROPIC_API_KEY secret in GCP Secret Manager.'
+      : `AI generation failed: ${msg.slice(0, 200)}`;
+    return NextResponse.json({ error: friendly }, { status: 502 });
+  }
 
   const briefing = await db.briefing.create({
     data: {
