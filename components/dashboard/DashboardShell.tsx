@@ -20,6 +20,7 @@ import {
   X,
   Zap,
   Target,
+  Megaphone,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
   { href: '/dashboard/sentiment', icon: BarChart2, label: 'Sentiment' },
   { href: '/dashboard/briefings', icon: FileText, label: 'Briefings' },
   { href: '/dashboard/predictions', icon: Target, label: 'Predictions' },
+  { href: '/dashboard/marketing', icon: Megaphone, label: 'Marketing' },
   { href: '/dashboard/sources', icon: Rss, label: 'Sources' },
   { href: '/dashboard/watchlist', icon: Star, label: 'Watchlist' },
   { href: '/dashboard/calendar', icon: Calendar, label: 'Calendar' },

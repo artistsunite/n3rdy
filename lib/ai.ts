@@ -394,6 +394,69 @@ Return only the insight, no preamble.`;
   return text.trim();
 }
 
+// ─── Marketing Agent Runner ───────────────────────────────────────────────────
+
+export interface MarketingAgentResult {
+  content: string;
+  aiProvider: string;
+}
+
+export async function runMarketingAgent(params: {
+  agentId: string;
+  agentSystemPrompt: string;
+  brief: string;
+  userContext?: { businessType?: string | null; industry?: string | null };
+}): Promise<MarketingAgentResult> {
+  const { agentSystemPrompt, brief, userContext } = params;
+
+  const contextBlock = userContext?.businessType || userContext?.industry
+    ? `\nUSER CONTEXT\nBusiness type: ${userContext.businessType ?? 'not specified'}\nIndustry: ${userContext.industry ?? 'not specified'}\n`
+    : '';
+
+  const userMessage = `${contextBlock}\nBRIEF FROM USER:\n${brief}`;
+
+  let text: string;
+  let aiProvider = 'claude';
+
+  try {
+    const message = await client.messages.create({
+      model: 'claude-opus-4-8',
+      max_tokens: 2048,
+      system: agentSystemPrompt,
+      messages: [{ role: 'user', content: userMessage }],
+    });
+    text = message.content[0].type === 'text' ? message.content[0].text : '';
+  } catch (err) {
+    if (isCreditsError(err)) {
+      try {
+        aiProvider = 'openai';
+        const openAiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'gpt-4o',
+            max_tokens: 2048,
+            messages: [
+              { role: 'system', content: agentSystemPrompt },
+              { role: 'user', content: userMessage },
+            ],
+          }),
+        });
+        const openAiData = await openAiRes.json() as { choices: Array<{ message: { content: string } }> };
+        text = openAiData.choices[0]?.message?.content ?? '';
+      } catch {
+        aiProvider = 'gemini';
+        const combinedPrompt = `${agentSystemPrompt}\n\n---\n\n${userMessage}`;
+        text = await callGemini(combinedPrompt, 2048);
+      }
+    } else {
+      throw err;
+    }
+  }
+
+  return { content: text.trim(), aiProvider };
+}
+
 export async function generateBriefing(params: {
   userId: string;
   articles: Array<{

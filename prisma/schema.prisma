@@ -23,6 +23,7 @@ model User {
   notifications       Notification[]
   predictions         Prediction[]
   predictionAccuracy  PredictionAccuracy[]
+  marketingBriefs     MarketingBrief[]
 }
 
 model UserPreferences {
@@ -294,4 +295,26 @@ model PredictionAccuracy {
   updatedAt        DateTime @updatedAt
 
   @@unique([userId, targetType, confidenceBucket])
+}
+
+model MarketingBrief {
+  id        String          @id @default(cuid())
+  userId    String
+  agentId   String          // "content-creator" | "seo-specialist" | etc.
+  brief     String          @db.Text
+  createdAt DateTime        @default(now())
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  output    MarketingOutput?
+
+  @@index([userId])
+  @@index([userId, agentId])
+}
+
+model MarketingOutput {
+  id         String         @id @default(cuid())
+  briefId    String         @unique
+  content    String         @db.Text
+  aiProvider String         @default("claude")
+  createdAt  DateTime       @default(now())
+  brief      MarketingBrief @relation(fields: [briefId], references: [id], onDelete: Cascade)
 }
