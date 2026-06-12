@@ -38,6 +38,12 @@ env:
     availability:
       - RUNTIME
 
+  # OpenAI — fallback when Anthropic credits are exhausted
+  - variable: OPENAI_API_KEY
+    secret: OPENAI_API_KEY
+    availability:
+      - RUNTIME
+
   # Firebase public config
   - variable: NEXT_PUBLIC_FIREBASE_API_KEY
     secret: NEXT_PUBLIC_FIREBASE_API_KEY

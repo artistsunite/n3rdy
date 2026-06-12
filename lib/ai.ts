@@ -43,6 +43,39 @@ export interface BriefingContent {
   watchNext: string[];
 }
 
+// Returns true for Anthropic billing / quota errors that warrant an OpenAI fallback
+function isCreditsError(err: unknown): boolean {
+  const msg = (err as Error)?.message ?? '';
+  return (
+    msg.includes('credit balance') ||
+    msg.includes('insufficient_quota') ||
+    msg.includes('billing') ||
+    msg.includes('rate_limit') ||
+    msg.includes('overloaded')
+  );
+}
+
+// OpenAI fallback via raw fetch — no extra package needed
+async function callOpenAI(prompt: string, maxTokens: number): Promise<string> {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) throw new Error('OPENAI_API_KEY not set');
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      max_tokens: maxTokens,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: { message?: string } }).error?.message ?? `OpenAI HTTP ${res.status}`);
+  }
+  const data = await res.json() as { choices: Array<{ message: { content: string } }> };
+  return data.choices[0]?.message?.content ?? '';
+}
+
 export async function analyzeArticle(article: {
   title: string;
   summary?: string | null;
@@ -51,13 +84,7 @@ export async function analyzeArticle(article: {
 }): Promise<ArticleAnalysisResult> {
   const content = article.fullText || article.summary || article.title;
 
-  const message = await client.messages.create({
-    model: 'claude-opus-4-8',
-    max_tokens: 1024,
-    messages: [
-      {
-        role: 'user',
-        content: `Analyze this news article and return a JSON object with the following structure. Be precise and objective.
+  const prompt = `Analyze this news article and return a JSON object with the following structure. Be precise and objective.
 
 Article title: ${article.title}
 Source: ${article.sourceName}
@@ -82,12 +109,25 @@ Return ONLY valid JSON with this exact structure:
   },
   "sectorsAffected": ["technology", "finance", etc],
   "secondOrderEffects": "Brief analysis of downstream effects"
-}`,
-      },
-    ],
-  });
+}`;
 
-  const text = message.content[0].type === 'text' ? message.content[0].text : '';
+  let text: string;
+  try {
+    const message = await client.messages.create({
+      model: 'claude-opus-4-8',
+      max_tokens: 1024,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    text = message.content[0].type === 'text' ? message.content[0].text : '';
+  } catch (err) {
+    if (isCreditsError(err)) {
+      console.warn('[ai] Claude credits exhausted — falling back to OpenAI for article analysis');
+      text = await callOpenAI(prompt, 1024);
+    } else {
+      throw err;
+    }
+  }
+
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('No JSON in AI response');
   return JSON.parse(jsonMatch[0]) as ArticleAnalysisResult;
@@ -124,13 +164,7 @@ export async function generateBriefing(params: {
     )
     .join('\n\n');
 
-  const message = await client.messages.create({
-    model: 'claude-opus-4-8',
-    max_tokens: 2048,
-    messages: [
-      {
-        role: 'user',
-        content: `You are an elite market intelligence analyst. Generate an ${style}-style executive briefing for a professional in ${industry}.
+  const prompt = `You are an elite market intelligence analyst. Generate an ${style}-style executive briefing for a professional in ${industry}.
 
 IMPORTANT: This is informational analysis only, not financial advice.
 
@@ -165,12 +199,25 @@ Return ONLY valid JSON with this exact structure:
   "bearishDevelopments": ["negative development 1", "negative development 2"],
   "sevenDayOutlook": "forward-looking paragraph on what to watch over the next 7 days",
   "watchNext": ["thing to monitor 1", "thing to monitor 2", "thing to monitor 3"]
-}`,
-      },
-    ],
-  });
+}`;
 
-  const text = message.content[0].type === 'text' ? message.content[0].text : '';
+  let text: string;
+  try {
+    const message = await client.messages.create({
+      model: 'claude-opus-4-8',
+      max_tokens: 2048,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    text = message.content[0].type === 'text' ? message.content[0].text : '';
+  } catch (err) {
+    if (isCreditsError(err)) {
+      console.warn('[ai] Claude credits exhausted — falling back to OpenAI for briefing generation');
+      text = await callOpenAI(prompt, 2048);
+    } else {
+      throw err;
+    }
+  }
+
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('No JSON in AI response');
   return JSON.parse(jsonMatch[0]) as BriefingContent;
