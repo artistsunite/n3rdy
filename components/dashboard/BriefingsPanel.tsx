@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { FileText, ChevronDown, ChevronUp, Zap } from 'lucide-react';
+import { FileText, ChevronDown, ChevronUp, Zap, AlertCircle } from 'lucide-react';
 
 interface BriefingContent {
   executiveSummary: string;
@@ -28,6 +28,7 @@ export default function BriefingsPanel() {
   const [briefings, setBriefings] = useState<Briefing[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const loadBriefings = async () => {
@@ -41,12 +42,25 @@ export default function BriefingsPanel() {
 
   const triggerBriefing = async () => {
     setGenerating(true);
-    await fetch('/api/briefings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'custom' }) });
-    // Poll for new briefing
-    setTimeout(async () => {
-      await loadBriefings();
+    setError(null);
+    try {
+      const res = await fetch('/api/briefings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'custom' }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? 'Generation failed. Try refreshing your news feed first.');
+      } else if (data.briefing) {
+        setBriefings((prev) => [data.briefing, ...prev]);
+        setExpanded(data.briefing.id);
+      }
+    } catch {
+      setError('Network error. Please try again.');
+    } finally {
       setGenerating(false);
-    }, 3000);
+    }
   };
 
   const markRead = async (id: string) => {
@@ -67,18 +81,34 @@ export default function BriefingsPanel() {
           className="inline-flex items-center gap-2 bg-n3-primary text-n3-bg px-4 py-2 rounded-lg text-sm font-semibold hover:bg-n3-primary/90 transition-colors disabled:opacity-60"
         >
           <Zap size={14} />
-          {generating ? 'Generating...' : 'Generate Now'}
+          {generating ? 'Generating…' : 'Generate Now'}
         </button>
       </div>
+
+      {error && (
+        <div className="flex items-start gap-3 bg-n3-danger/10 border border-n3-danger/20 rounded-xl px-4 py-3">
+          <AlertCircle size={16} className="text-n3-danger mt-0.5 flex-shrink-0" />
+          <p className="text-sm text-n3-danger">{error}</p>
+        </div>
+      )}
+
+      {generating && (
+        <div className="bg-n3-card border border-n3-border rounded-xl p-6 text-center space-y-2">
+          <div className="w-8 h-8 border-2 border-n3-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-sm text-n3-muted">Claude is analysing your news feed and writing your briefing…</p>
+          <p className="text-xs text-n3-muted/60">This takes 15–30 seconds</p>
+        </div>
+      )}
 
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => <div key={i} className="h-24 bg-n3-card border border-n3-border rounded-xl animate-pulse" />)}
         </div>
-      ) : briefings.length === 0 ? (
+      ) : briefings.length === 0 && !generating ? (
         <div className="bg-n3-card border border-dashed border-n3-border rounded-xl p-10 text-center">
           <FileText size={32} className="text-n3-muted mx-auto mb-3" />
-          <p className="text-n3-muted text-sm">No briefings yet. Click &quot;Generate Now&quot; to create your first one.</p>
+          <p className="text-n3-muted text-sm">No briefings yet.</p>
+          <p className="text-n3-muted/60 text-xs mt-1">Make sure your news feed has articles, then click &quot;Generate Now&quot;.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -171,6 +201,12 @@ export default function BriefingsPanel() {
                             </li>
                           ))}
                         </ul>
+                      </Section>
+                    )}
+
+                    {content.marketImpactForecast && (
+                      <Section title="Market Impact Forecast">
+                        <p className="text-sm text-n3-text leading-relaxed">{content.marketImpactForecast}</p>
                       </Section>
                     )}
 
