@@ -136,7 +136,7 @@ export default function AccuracyDashboard({ accuracy, totalPredictions, correctP
               <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#6b7280' }} />
               <Tooltip
                 contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 12 }}
-                formatter={(v: number, name: string) => [`${v}%`, name === 'actual' ? 'Actual hit rate' : 'Perfect calibration']}
+                formatter={(v: unknown, name: unknown) => [`${v}%`, name === 'actual' ? 'Actual hit rate' : 'Perfect calibration'] as [string, string]}
               />
               <Line type="linear" dataKey="perfect" stroke="rgba(255,255,255,0.15)" strokeDasharray="4 4" dot={false} strokeWidth={1} />
               <Line type="monotone" dataKey="actual" stroke="#6366f1" strokeWidth={2} dot={{ r: 3, fill: '#6366f1' }} connectNulls />
