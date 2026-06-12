@@ -43,13 +43,19 @@ export interface BriefingContent {
   watchNext: string[];
 }
 
-// Robustly extract a JSON object from a model response that may include
+// Robustly extract a JSON object or array from a model response that may include
 // markdown code fences, thinking tokens, or surrounding prose
 function extractJSON(text: string): string {
   // Strip markdown code fences: ```json ... ``` or ``` ... ```
   const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fenceMatch) text = fenceMatch[1];
-  // Find the outermost { ... } block
+  if (fenceMatch) text = fenceMatch[1].trim();
+  // Use whichever comes first: array [...] or object {...}
+  const arrayIdx = text.indexOf('[');
+  const objIdx = text.indexOf('{');
+  if (arrayIdx !== -1 && (objIdx === -1 || arrayIdx < objIdx)) {
+    const arrayMatch = text.match(/\[[\s\S]*\]/);
+    if (arrayMatch) return arrayMatch[0];
+  }
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (jsonMatch) return jsonMatch[0];
   throw new Error('No JSON in AI response');
