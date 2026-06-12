@@ -43,6 +43,18 @@ export interface BriefingContent {
   watchNext: string[];
 }
 
+// Robustly extract a JSON object from a model response that may include
+// markdown code fences, thinking tokens, or surrounding prose
+function extractJSON(text: string): string {
+  // Strip markdown code fences: ```json ... ``` or ``` ... ```
+  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fenceMatch) text = fenceMatch[1];
+  // Find the outermost { ... } block
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (jsonMatch) return jsonMatch[0];
+  throw new Error('No JSON in AI response');
+}
+
 // Returns true for Anthropic billing / quota errors that warrant an OpenAI fallback
 function isCreditsError(err: unknown): boolean {
   const msg = (err as Error)?.message ?? '';
@@ -91,7 +103,10 @@ async function callGemini(prompt: string, maxTokens: number): Promise<string> {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { maxOutputTokens: maxTokens },
+            generationConfig: {
+              maxOutputTokens: maxTokens,
+              thinkingConfig: { thinkingBudget: 0 },
+            },
           }),
         }
       );
@@ -170,9 +185,7 @@ Return ONLY valid JSON with this exact structure:
     }
   }
 
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error('No JSON in AI response');
-  return JSON.parse(jsonMatch[0]) as ArticleAnalysisResult;
+  return JSON.parse(extractJSON(text)) as ArticleAnalysisResult;
 }
 
 export async function generateBriefing(params: {
@@ -265,7 +278,5 @@ Return ONLY valid JSON with this exact structure:
     }
   }
 
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error('No JSON in AI response');
-  return JSON.parse(jsonMatch[0]) as BriefingContent;
+  return JSON.parse(extractJSON(text)) as BriefingContent;
 }
