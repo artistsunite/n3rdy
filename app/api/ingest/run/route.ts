@@ -133,7 +133,7 @@ export async function POST() {
     }),
     db.userPreferences.upsert({
       where: { userId: uid },
-      create: { userId, lastScanAt: new Date() },
+      create: { userId: uid, lastScanAt: new Date() },
       update: { lastScanAt: new Date() },
     }),
   ]);
