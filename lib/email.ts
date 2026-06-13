@@ -1,7 +1,3 @@
-import { Resend } from 'resend';
-
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 interface TopStory {
   headline: string;
   summary: string;
@@ -30,6 +26,9 @@ export async function sendBriefingEmail(params: {
   toName: string;
   briefing: BriefingContent;
 }): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) throw new Error('RESEND_API_KEY is not configured');
+
   const { toEmail, toName, briefing } = params;
   const firstName = toName?.split(' ')[0] ?? 'there';
   const date = new Date().toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -116,12 +115,22 @@ export async function sendBriefingEmail(params: {
 </body>
 </html>`;
 
-  const { error } = await resend.emails.send({
-    from: 'N3RDY Intelligence <briefings@n3rdy.info>',
-    to: toEmail,
-    subject: `Your N3RDY Brief — ${date}`,
-    html,
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: 'N3RDY Intelligence <briefings@n3rdy.info>',
+      to: toEmail,
+      subject: `Your N3RDY Brief — ${date}`,
+      html,
+    }),
   });
 
-  if (error) throw new Error(`Resend error: ${error.message}`);
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Resend API error ${res.status}: ${body}`);
+  }
 }
