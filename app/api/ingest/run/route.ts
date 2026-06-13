@@ -125,11 +125,18 @@ export async function POST() {
     );
   }
 
-  // Update lastFetchedAt for processed sources
-  await db.source.updateMany({
-    where: { id: { in: sources.map((s) => s.id) } },
-    data: { lastFetchedAt: new Date() },
-  });
+  // Update lastFetchedAt for processed sources + lastScanAt for user
+  await Promise.all([
+    db.source.updateMany({
+      where: { id: { in: sources.map((s) => s.id) } },
+      data: { lastFetchedAt: new Date() },
+    }),
+    db.userPreferences.upsert({
+      where: { userId: uid },
+      create: { userId, lastScanAt: new Date() },
+      update: { lastScanAt: new Date() },
+    }),
+  ]);
 
   return NextResponse.json({
     ok: true,

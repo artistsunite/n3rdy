@@ -25,7 +25,7 @@ if not db_url:
 
 migration_path = os.path.join(
     root, 'prisma', 'migrations',
-    '20260613000001_overview_enhancements', 'migration.sql'
+    '20260614000001_overview_controls', 'migration.sql'
 )
 
 with open(migration_path) as f:

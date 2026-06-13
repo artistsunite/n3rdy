@@ -22,6 +22,14 @@ export async function PATCH(req: NextRequest) {
     briefingStyle: string;
     briefingFrequency: number;
     enabledCategories: string[];
+    scanFrequency: number;
+    autoRefreshInterval: number;
+    minImpactFilter: number;
+    riskLevelFilter: string;
+    widgetVisibility: Record<string, boolean>;
+    emailBriefingEnabled: boolean;
+    emailBriefingFrequency: string;
+    alertThresholds: Record<string, unknown>;
   }>;
 
   const allowed: Record<string, unknown> = {};
@@ -32,6 +40,14 @@ export async function PATCH(req: NextRequest) {
   if ('briefingStyle' in body) allowed.briefingStyle = body.briefingStyle;
   if ('briefingFrequency' in body) allowed.briefingFrequency = body.briefingFrequency;
   if ('enabledCategories' in body) allowed.enabledCategories = body.enabledCategories;
+  if ('scanFrequency' in body) allowed.scanFrequency = body.scanFrequency;
+  if ('autoRefreshInterval' in body) allowed.autoRefreshInterval = body.autoRefreshInterval;
+  if ('minImpactFilter' in body) allowed.minImpactFilter = body.minImpactFilter;
+  if ('riskLevelFilter' in body) allowed.riskLevelFilter = body.riskLevelFilter;
+  if ('widgetVisibility' in body) allowed.widgetVisibility = body.widgetVisibility;
+  if ('emailBriefingEnabled' in body) allowed.emailBriefingEnabled = body.emailBriefingEnabled;
+  if ('emailBriefingFrequency' in body) allowed.emailBriefingFrequency = body.emailBriefingFrequency;
+  if ('alertThresholds' in body) allowed.alertThresholds = body.alertThresholds;
 
   const prefs = await prisma.userPreferences.upsert({
     where: { userId },

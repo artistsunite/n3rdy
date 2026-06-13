@@ -38,10 +38,19 @@ model UserPreferences {
   briefingStyle     String   @default("executive")
   dashboardLayout   Json     @default("{}")
   briefingFrequency Int      @default(60)
-  enabledCategories String[] @default(["markets", "crypto", "macro", "geopolitics", "technology"])
-  timezone          String   @default("UTC")
-  country           String?
-  updatedAt         DateTime @updatedAt
+  enabledCategories    String[] @default(["markets", "crypto", "macro", "geopolitics", "technology"])
+  timezone             String   @default("UTC")
+  country              String?
+  scanFrequency        Int      @default(6)
+  autoRefreshInterval  Int      @default(0)
+  minImpactFilter      Int      @default(0)
+  riskLevelFilter      String   @default("all")
+  widgetVisibility     Json     @default("{}")
+  emailBriefingEnabled Boolean  @default(false)
+  emailBriefingFrequency String @default("manual")
+  alertThresholds      Json     @default("{}")
+  lastScanAt           DateTime?
+  updatedAt            DateTime @updatedAt
 }
 
 model Source {

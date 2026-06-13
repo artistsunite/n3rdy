@@ -1,13 +1,17 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
 
-export async function GET() {
+const PERIOD_HOURS: Record<string, number> = { '24h': 24, '7d': 168, '30d': 720 };
+
+export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const uid = session.user.id;
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const period = new URL(req.url).searchParams.get('period') ?? '24h';
+  const hours = PERIOD_HOURS[period] ?? 24;
+  const since = new Date(Date.now() - hours * 60 * 60 * 1000);
 
   const userSources = await db.userSource.findMany({
     where: { userId: uid, isActive: true },

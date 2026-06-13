@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { TrendingUp, TrendingDown, Minus, RefreshCw, Zap } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { TrendingUp, TrendingDown, Minus, RefreshCw, Zap, SlidersHorizontal } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import ArticleCard from './ArticleCard';
 import WatchlistActivityWidget from './WatchlistActivityWidget';
@@ -10,6 +10,7 @@ import TrendingPostWidget from './TrendingPostWidget';
 import UserProfileWidget from './UserProfileWidget';
 import GoogleSyncBanner from './GoogleSyncBanner';
 import ExpandableWidget from './ExpandableWidget';
+import OverviewControlDrawer, { DashboardFilters } from './OverviewControlDrawer';
 
 interface SentimentData {
   overall: number;
@@ -62,28 +63,79 @@ export default function OverviewPanel({ userName }: { userName?: string | null }
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [filters, setFilters] = useState<DashboardFilters>({
+    category: 'all',
+    timeWindow: '24h',
+    minImpact: 0,
+    riskLevel: 'all',
+    widgetVisibility: {},
+    autoRefreshInterval: 0,
+  });
+  const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (f?: DashboardFilters) => {
+    const active = f ?? filters;
+    const params = new URLSearchParams({ limit: '6' });
+    if (active.minImpact > 0) params.set('minImpact', String(active.minImpact));
+    if (active.riskLevel !== 'all') params.set('riskLevel', active.riskLevel);
     const [s, a] = await Promise.all([
-      fetch('/api/sentiment').then(r => r.json()),
-      fetch('/api/articles?limit=6').then(r => r.json()),
+      fetch(`/api/sentiment?period=${active.timeWindow}`).then(r => r.json()),
+      fetch(`/api/articles?${params}`).then(r => r.json()),
     ]);
     setSentiment(s);
     setArticles(a.articles ?? []);
     setLastUpdated(new Date());
     return (a.articles ?? []).length as number;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Load initial preferences + data
   useEffect(() => {
-    loadData().then((count) => {
-      setLoading(false);
-      if (count === 0) {
-        // Auto-bootstrap when no articles yet
-        fetch('/api/ingest/run', { method: 'POST' })
-          .then(() => loadData())
-          .catch(() => null);
-      }
-    }).catch(() => setLoading(false));
+    fetch('/api/settings/preferences')
+      .then(r => r.json())
+      .then(data => {
+        const p = data.preferences;
+        if (p) {
+          const initial: DashboardFilters = {
+            category: (p.enabledCategories ?? []).join(',') || 'all',
+            timeWindow: '24h',
+            minImpact: p.minImpactFilter ?? 0,
+            riskLevel: p.riskLevelFilter ?? 'all',
+            widgetVisibility: (p.widgetVisibility as Record<string, boolean>) ?? {},
+            autoRefreshInterval: p.autoRefreshInterval ?? 0,
+          };
+          setFilters(initial);
+          return loadData(initial);
+        }
+        return loadData();
+      })
+      .then((count) => {
+        setLoading(false);
+        if ((count ?? 0) === 0) {
+          fetch('/api/ingest/run', { method: 'POST' })
+            .then(() => loadData())
+            .catch(() => null);
+        }
+      })
+      .catch(() => {
+        loadData().then(() => setLoading(false)).catch(() => setLoading(false));
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-refresh timer
+  useEffect(() => {
+    if (autoRefreshRef.current) clearInterval(autoRefreshRef.current);
+    if (filters.autoRefreshInterval > 0) {
+      autoRefreshRef.current = setInterval(() => loadData(), filters.autoRefreshInterval * 60000);
+    }
+    return () => { if (autoRefreshRef.current) clearInterval(autoRefreshRef.current); };
+  }, [filters.autoRefreshInterval, loadData]);
+
+  const handleFiltersChange = useCallback((f: DashboardFilters) => {
+    setFilters(f);
+    loadData(f).catch(() => null);
   }, [loadData]);
 
   async function handleRefresh() {
@@ -91,6 +143,8 @@ export default function OverviewPanel({ userName }: { userName?: string | null }
     await loadData().catch(() => null);
     setRefreshing(false);
   }
+
+  const isVisible = (key: string) => filters.widgetVisibility[key] !== false;
 
   const overallScore = sentiment?.overall ?? 0;
   const opportunities = articles.filter(a => (a.analysis?.sentimentScore ?? 0) > 0.3).length;
@@ -252,7 +306,7 @@ export default function OverviewPanel({ userName }: { userName?: string | null }
           </h1>
           <p className="text-white/40 text-sm mt-1">{dateStr}</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {lastUpdated && (
             <span className="text-xs text-white/30 hidden sm:block">
               Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -264,6 +318,13 @@ export default function OverviewPanel({ userName }: { userName?: string | null }
             className="p-2 liquid-glass-card rounded-xl text-white/50 hover:text-white transition-colors"
           >
             <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+          </button>
+          <button
+            onClick={() => setDrawerOpen(true)}
+            className="p-2 liquid-glass-card rounded-xl text-white/50 hover:text-[#00E5FF] transition-colors"
+            title="Dashboard Controls"
+          >
+            <SlidersHorizontal size={14} />
           </button>
         </div>
       </div>
@@ -308,24 +369,34 @@ export default function OverviewPanel({ userName }: { userName?: string | null }
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <WatchlistActivityWidget />
-          <MarketingCalendarWidget />
-          <TrendingPostWidget />
-          <UserProfileWidget />
-          <ExpandableWidget
-            title="Sentiment Pulse"
-            icon={<Zap size={14} />}
-            compactContent={sentimentCompact}
-            expandedContent={sentimentExpanded}
-          />
-          <ExpandableWidget
-            title="Top Stories"
-            icon={<TrendingUp size={14} />}
-            compactContent={topStoriesCompact}
-            expandedContent={topStoriesExpanded}
-          />
+          {isVisible('watchlist') && <WatchlistActivityWidget />}
+          {isVisible('marketing') && <MarketingCalendarWidget />}
+          {isVisible('trending') && <TrendingPostWidget />}
+          {isVisible('profile') && <UserProfileWidget />}
+          {isVisible('sentiment') && (
+            <ExpandableWidget
+              title="Sentiment Pulse"
+              icon={<Zap size={14} />}
+              compactContent={sentimentCompact}
+              expandedContent={sentimentExpanded}
+            />
+          )}
+          {isVisible('stories') && (
+            <ExpandableWidget
+              title="Top Stories"
+              icon={<TrendingUp size={14} />}
+              compactContent={topStoriesCompact}
+              expandedContent={topStoriesExpanded}
+            />
+          )}
         </div>
       )}
+
+      <OverviewControlDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        onFiltersChange={handleFiltersChange}
+      />
     </div>
   );
 }
