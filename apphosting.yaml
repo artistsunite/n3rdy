@@ -120,3 +120,8 @@ env:
     secret: GOOGLE_CLIENT_SECRET
     availability:
       - RUNTIME
+
+  - variable: GOOGLE_OAUTH_STATE_SECRET
+    secret: GOOGLE_OAUTH_STATE_SECRET
+    availability:
+      - RUNTIME
