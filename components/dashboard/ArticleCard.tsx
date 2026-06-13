@@ -18,7 +18,7 @@ interface ArticleCardProps {
 const SENTIMENT_STYLES: Record<string, string> = {
   positive: 'text-n3-success bg-n3-success/10 border-n3-success/20',
   negative: 'text-n3-danger bg-n3-danger/10 border-n3-danger/20',
-  neutral: 'text-n3-muted bg-white/5 border-white/10',
+  neutral: 'text-white/50 bg-white/5 border-white/10',
 };
 
 const RISK_STYLES: Record<string, string> = {
@@ -31,7 +31,7 @@ const RISK_STYLES: Record<string, string> = {
 function SentimentIcon({ value }: { value?: string }) {
   if (value === 'bullish') return <TrendingUp size={12} className="text-n3-success" />;
   if (value === 'bearish') return <TrendingDown size={12} className="text-n3-danger" />;
-  return <Minus size={12} className="text-n3-muted" />;
+  return <Minus size={12} className="text-white/50" />;
 }
 
 export default function ArticleCard({
@@ -62,13 +62,13 @@ export default function ArticleCard({
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-xs text-n3-muted">{sourceName}</span>
-            <span className="text-xs text-n3-border">·</span>
-            <span className="text-xs text-n3-muted">{timeAgo}</span>
+            <span className="text-xs text-white/50">{sourceName}</span>
+            <span className="text-xs text-white/20">·</span>
+            <span className="text-xs text-white/50">{timeAgo}</span>
             {riskLevel && riskLevel !== 'low' && (
               <>
-                <span className="text-xs text-n3-border">·</span>
-                <span className={`text-xs font-medium ${RISK_STYLES[riskLevel] ?? 'text-n3-muted'}`}>
+                <span className="text-xs text-white/20">·</span>
+                <span className={`text-xs font-medium ${RISK_STYLES[riskLevel] ?? 'text-white/50'}`}>
                   {riskLevel.toUpperCase()} RISK
                 </span>
               </>
@@ -79,13 +79,13 @@ export default function ArticleCard({
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm font-semibold text-n3-text group-hover:text-n3-primary transition-colors line-clamp-2 leading-snug"
+            className="text-sm font-semibold text-white group-hover:text-n3-primary transition-colors line-clamp-2 leading-snug"
           >
             {title}
           </a>
 
           {!compact && shortSummary && (
-            <p className="text-xs text-n3-muted mt-1.5 line-clamp-2 leading-relaxed">
+            <p className="text-xs text-white/50 mt-1.5 line-clamp-2 leading-relaxed">
               {shortSummary}
             </p>
           )}
@@ -102,16 +102,16 @@ export default function ArticleCard({
             )}
 
             {marketImpactScore !== undefined && (
-              <span className="text-xs text-n3-muted">
+              <span className="text-xs text-white/50">
                 Impact:{' '}
-                <span className={marketImpactScore >= 0.7 ? 'text-n3-warning' : marketImpactScore >= 0.4 ? 'text-n3-text' : 'text-n3-muted'}>
+                <span className={marketImpactScore >= 0.7 ? 'text-n3-warning' : marketImpactScore >= 0.4 ? 'text-white' : 'text-white/50'}>
                   {(marketImpactScore * 10).toFixed(1)}/10
                 </span>
               </span>
             )}
 
             {sectorsAffected.slice(0, 2).map((s) => (
-              <span key={s} className="text-xs bg-white/5 text-n3-muted px-1.5 py-0.5 rounded">
+              <span key={s} className="text-xs bg-white/5 text-white/50 px-1.5 py-0.5 rounded">
                 {s}
               </span>
             ))}
@@ -122,7 +122,7 @@ export default function ArticleCard({
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-0.5 text-n3-muted hover:text-n3-primary transition-colors flex-shrink-0"
+          className="mt-0.5 text-white/50 hover:text-n3-primary transition-colors flex-shrink-0"
         >
           <ExternalLink size={14} />
         </a>

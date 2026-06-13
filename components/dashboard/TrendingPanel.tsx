@@ -27,8 +27,8 @@ export default function TrendingPanel() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-n3-text">Trending Topics</h1>
-        <p className="text-n3-muted text-sm mt-1">Most mentioned topics across your sources in the last 24 hours</p>
+        <h1 className="text-2xl font-bold text-white">Trending Topics</h1>
+        <p className="text-white/50 text-sm mt-1">Most mentioned topics across your sources in the last 24 hours</p>
       </div>
 
       {loading ? (
@@ -37,19 +37,19 @@ export default function TrendingPanel() {
         </div>
       ) : topics.length === 0 ? (
         <div className="liquid-glass-card rounded-xl p-10 text-center">
-          <TrendingUp size={32} className="text-n3-muted mx-auto mb-3" />
-          <p className="text-n3-muted text-sm">No trending topics yet. Ingest and analyse articles to see trends.</p>
+          <TrendingUp size={32} className="text-white/50 mx-auto mb-3" />
+          <p className="text-white/50 text-sm">No trending topics yet. Ingest and analyse articles to see trends.</p>
         </div>
       ) : (
         <div className="space-y-2">
           {topics.map((topic, i) => (
             <div key={topic.id} className="liquid-glass-card rounded-xl px-4 py-3 flex items-center gap-4">
-              <div className="text-sm font-bold text-n3-muted w-6 flex-shrink-0">#{i + 1}</div>
+              <div className="text-sm font-bold text-white/50 w-6 flex-shrink-0">#{i + 1}</div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-semibold text-n3-text truncate">{topic.name}</span>
+                  <span className="text-sm font-semibold text-white truncate">{topic.name}</span>
                   {topic.velocity > 0.5 && <Zap size={12} className="text-n3-warning flex-shrink-0" />}
-                  <span className="text-xs bg-white/5 text-n3-muted px-1.5 py-0.5 rounded capitalize flex-shrink-0">
+                  <span className="text-xs bg-white/5 text-white/50 px-1.5 py-0.5 rounded capitalize flex-shrink-0">
                     {topic.category}
                   </span>
                 </div>
@@ -62,8 +62,8 @@ export default function TrendingPanel() {
                 </div>
               </div>
               <div className="text-right flex-shrink-0">
-                <div className="text-sm font-semibold text-n3-text">{topic.mentionCount}</div>
-                <div className="text-xs text-n3-muted">mentions</div>
+                <div className="text-sm font-semibold text-white">{topic.mentionCount}</div>
+                <div className="text-xs text-white/50">mentions</div>
               </div>
               <div className="flex-shrink-0">
                 <div
@@ -72,7 +72,7 @@ export default function TrendingPanel() {
                       ? 'text-n3-success'
                       : topic.sentimentScore < -0.1
                       ? 'text-n3-danger'
-                      : 'text-n3-muted'
+                      : 'text-white/50'
                   }`}
                 >
                   {topic.sentimentScore > 0.1 ? '↑' : topic.sentimentScore < -0.1 ? '↓' : '—'}

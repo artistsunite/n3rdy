@@ -72,8 +72,8 @@ export default function BriefingsPanel() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-n3-text">Briefings</h1>
-          <p className="text-n3-muted text-sm mt-1">AI-generated executive intelligence reports</p>
+          <h1 className="text-2xl font-bold text-white">Briefings</h1>
+          <p className="text-white/50 text-sm mt-1">AI-generated executive intelligence reports</p>
         </div>
         <button
           onClick={triggerBriefing}
@@ -95,8 +95,8 @@ export default function BriefingsPanel() {
       {generating && (
         <div className="liquid-glass-card rounded-xl p-6 text-center space-y-2">
           <div className="w-8 h-8 border-2 border-n3-primary border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-n3-muted">Claude is analysing your news feed and writing your briefing…</p>
-          <p className="text-xs text-n3-muted/60">This takes 15–30 seconds</p>
+          <p className="text-sm text-white/50">Claude is analysing your news feed and writing your briefing…</p>
+          <p className="text-xs text-white/30">This takes 15–30 seconds</p>
         </div>
       )}
 
@@ -106,9 +106,9 @@ export default function BriefingsPanel() {
         </div>
       ) : briefings.length === 0 && !generating ? (
         <div className="liquid-glass-card rounded-xl p-10 text-center">
-          <FileText size={32} className="text-n3-muted mx-auto mb-3" />
-          <p className="text-n3-muted text-sm">No briefings yet.</p>
-          <p className="text-n3-muted/60 text-xs mt-1">Make sure your news feed has articles, then click &quot;Generate Now&quot;.</p>
+          <FileText size={32} className="text-white/50 mx-auto mb-3" />
+          <p className="text-white/50 text-sm">No briefings yet.</p>
+          <p className="text-white/30 text-xs mt-1">Make sure your news feed has articles, then click &quot;Generate Now&quot;.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -131,23 +131,23 @@ export default function BriefingsPanel() {
                     {!b.read && <div className="w-2 h-2 bg-n3-primary rounded-full flex-shrink-0" />}
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-n3-text capitalize">{b.type} Briefing</span>
+                        <span className="text-sm font-semibold text-white capitalize">{b.type} Briefing</span>
                         <span className="text-xs bg-n3-primary/10 text-n3-primary px-2 py-0.5 rounded-full">
                           {content?.sentimentOverview?.overall ?? 'mixed'}
                         </span>
                       </div>
-                      <div className="text-xs text-n3-muted mt-0.5">
+                      <div className="text-xs text-white/50 mt-0.5">
                         {new Date(b.createdAt).toLocaleString()}
                       </div>
                     </div>
                   </div>
-                  {isOpen ? <ChevronUp size={16} className="text-n3-muted" /> : <ChevronDown size={16} className="text-n3-muted" />}
+                  {isOpen ? <ChevronUp size={16} className="text-white/50" /> : <ChevronDown size={16} className="text-white/50" />}
                 </button>
 
                 {isOpen && content && (
                   <div className="px-5 pb-5 space-y-5 border-t border-white/10">
                     <Section title="Executive Summary">
-                      <p className="text-sm text-n3-text leading-relaxed">{content.executiveSummary}</p>
+                      <p className="text-sm text-white leading-relaxed">{content.executiveSummary}</p>
                     </Section>
 
                     {content.topStories?.length > 0 && (
@@ -156,10 +156,10 @@ export default function BriefingsPanel() {
                           {content.topStories.map((s, i) => (
                             <div key={i} className="border-l-2 border-n3-primary/30 pl-3">
                               <div className="flex items-center gap-2 mb-0.5">
-                                <span className="text-sm font-medium text-n3-text">{s.headline}</span>
-                                <span className={`text-xs px-1.5 py-0.5 rounded ${s.sentiment === 'bullish' ? 'bg-n3-success/10 text-n3-success' : s.sentiment === 'bearish' ? 'bg-n3-danger/10 text-n3-danger' : 'bg-white/5 text-n3-muted'}`}>{s.sentiment}</span>
+                                <span className="text-sm font-medium text-white">{s.headline}</span>
+                                <span className={`text-xs px-1.5 py-0.5 rounded ${s.sentiment === 'bullish' ? 'bg-n3-success/10 text-n3-success' : s.sentiment === 'bearish' ? 'bg-n3-danger/10 text-n3-danger' : 'bg-white/5 text-white/50'}`}>{s.sentiment}</span>
                               </div>
-                              <p className="text-xs text-n3-muted">{s.summary}</p>
+                              <p className="text-xs text-white/50">{s.summary}</p>
                               <p className="text-xs text-n3-primary mt-1">{s.impact}</p>
                             </div>
                           ))}
@@ -206,13 +206,13 @@ export default function BriefingsPanel() {
 
                     {content.marketImpactForecast && (
                       <Section title="Market Impact Forecast">
-                        <p className="text-sm text-n3-text leading-relaxed">{content.marketImpactForecast}</p>
+                        <p className="text-sm text-white leading-relaxed">{content.marketImpactForecast}</p>
                       </Section>
                     )}
 
                     {content.sevenDayOutlook && (
                       <Section title="7-Day Outlook">
-                        <p className="text-sm text-n3-text leading-relaxed">{content.sevenDayOutlook}</p>
+                        <p className="text-sm text-white leading-relaxed">{content.sevenDayOutlook}</p>
                       </Section>
                     )}
 
@@ -239,7 +239,7 @@ export default function BriefingsPanel() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="pt-4">
-      <div className="text-xs font-semibold text-n3-muted uppercase tracking-wider mb-2">{title}</div>
+      <div className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">{title}</div>
       {children}
     </div>
   );

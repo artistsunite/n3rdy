@@ -257,7 +257,7 @@ export default function MarketingPanel() {
                 >
                   {submitting ? (
                     <>
-                      <span className="w-3.5 h-3.5 border-2 border-n3-bg border-t-transparent rounded-full animate-spin" />
+                      <span className="w-3.5 h-3.5 border-2 border-black/60 border-t-transparent rounded-full animate-spin" />
                       Working...
                     </>
                   ) : (

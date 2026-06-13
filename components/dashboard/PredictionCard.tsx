@@ -85,7 +85,7 @@ function DirectionBadge({ direction }: { direction: string }) {
     </span>
   );
   return (
-    <span className="inline-flex items-center gap-1 bg-white/10 text-n3-muted px-2.5 py-1 rounded-full text-xs font-bold">
+    <span className="inline-flex items-center gap-1 bg-white/10 text-white/50 px-2.5 py-1 rounded-full text-xs font-bold">
       <Minus size={11} /> NEUTRAL
     </span>
   );
@@ -128,9 +128,9 @@ export default function PredictionCard({ prediction: p, onOutcome }: Props) {
         <div className="flex-1 min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <DirectionBadge direction={p.direction} />
-            <span className="text-xs bg-white/8 text-n3-muted px-2 py-0.5 rounded-full">{p.targetType}</span>
-            <span className="text-sm font-semibold text-n3-text">{p.target}</span>
-            <span className="text-xs text-n3-muted">· {p.timeframe}</span>
+            <span className="text-xs bg-white/8 text-white/50 px-2 py-0.5 rounded-full">{p.targetType}</span>
+            <span className="text-sm font-semibold text-white">{p.target}</span>
+            <span className="text-xs text-white/50">· {p.timeframe}</span>
             {!isPending && <StatusBadge status={p.status} />}
           </div>
 
@@ -138,7 +138,7 @@ export default function PredictionCard({ prediction: p, onOutcome }: Props) {
 
           <div className="flex flex-wrap items-center gap-3 text-xs">
             {p.baseRate !== null && (
-              <span className="text-n3-muted">
+              <span className="text-white/50">
                 Base rate: {Math.round(p.baseRate * 100)}%
                 {baseRateDelta !== null && (
                   <span className={baseRateDelta >= 0 ? ' text-n3-success' : ' text-n3-danger'}>
@@ -152,7 +152,7 @@ export default function PredictionCard({ prediction: p, onOutcome }: Props) {
                 <AlertTriangle size={11} /> Contrarian risk
               </span>
             )}
-            <span className={`${isExpired ? 'text-n3-danger' : 'text-n3-muted'}`}>{remaining}</span>
+            <span className={`${isExpired ? 'text-n3-danger' : 'text-white/50'}`}>{remaining}</span>
           </div>
 
           {/* Signal dots */}
@@ -160,14 +160,14 @@ export default function PredictionCard({ prediction: p, onOutcome }: Props) {
             <div className="flex flex-wrap gap-3">
               {SIGNAL_KEYS.map((k, i) => (
                 <div key={k} className="flex items-center gap-1.5">
-                  <span className="text-xs text-n3-muted">{SIGNAL_LABELS[i]}</span>
+                  <span className="text-xs text-white/50">{SIGNAL_LABELS[i]}</span>
                   <SignalDots value={p.signals![k]} />
                 </div>
               ))}
             </div>
           )}
         </div>
-        <div className="mt-1 text-n3-muted flex-shrink-0">
+        <div className="mt-1 text-white/50 flex-shrink-0">
           {open ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
         </div>
       </button>
@@ -184,15 +184,15 @@ export default function PredictionCard({ prediction: p, onOutcome }: Props) {
             <div className="px-4 py-4 space-y-4">
               {/* Reasoning */}
               <div>
-                <p className="text-xs font-semibold text-n3-muted uppercase tracking-wider mb-1.5">Reasoning</p>
-                <p className="text-sm text-n3-text leading-relaxed">{p.reasoning}</p>
+                <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-1.5">Reasoning</p>
+                <p className="text-sm text-white leading-relaxed">{p.reasoning}</p>
               </div>
 
               {/* Sub-questions */}
               {p.subQuestions && p.subQuestions.length > 0 && (
                 <div>
                   <button
-                    className="flex items-center gap-2 text-xs font-semibold text-n3-muted uppercase tracking-wider mb-1.5 hover:text-n3-text transition-colors"
+                    className="flex items-center gap-2 text-xs font-semibold text-white/50 uppercase tracking-wider mb-1.5 hover:text-white transition-colors"
                     onClick={() => setSubOpen(v => !v)}
                   >
                     Analysis Breakdown
@@ -209,8 +209,8 @@ export default function PredictionCard({ prediction: p, onOutcome }: Props) {
                               <div key={i} className="flex items-start gap-2 text-xs">
                                 <span className={`${color} font-bold mt-0.5 flex-shrink-0`}>{icon}</span>
                                 <div className="flex-1">
-                                  <span className="text-n3-text">{sq.question}</span>
-                                  <span className="text-n3-muted ml-1">— {sq.answer} ({Math.round(sq.confidence * 100)}%)</span>
+                                  <span className="text-white">{sq.question}</span>
+                                  <span className="text-white/50 ml-1">— {sq.answer} ({Math.round(sq.confidence * 100)}%)</span>
                                 </div>
                               </div>
                             );
@@ -230,7 +230,7 @@ export default function PredictionCard({ prediction: p, onOutcome }: Props) {
                       <p className="text-xs font-semibold text-n3-success mb-1.5 flex items-center gap-1">
                         <TrendingUp size={11} /> Bull Case
                       </p>
-                      <p className="text-xs text-n3-text leading-relaxed">{p.bullCase}</p>
+                      <p className="text-xs text-white leading-relaxed">{p.bullCase}</p>
                     </div>
                   )}
                   {p.bearCase && (
@@ -238,7 +238,7 @@ export default function PredictionCard({ prediction: p, onOutcome }: Props) {
                       <p className="text-xs font-semibold text-n3-danger mb-1.5 flex items-center gap-1">
                         <TrendingDown size={11} /> Bear Case
                       </p>
-                      <p className="text-xs text-n3-text leading-relaxed">{p.bearCase}</p>
+                      <p className="text-xs text-white leading-relaxed">{p.bearCase}</p>
                     </div>
                   )}
                 </div>
@@ -247,7 +247,7 @@ export default function PredictionCard({ prediction: p, onOutcome }: Props) {
               {/* Manual outcome buttons for pending/expired predictions */}
               {isPending && isExpired && onOutcome && (
                 <div>
-                  <p className="text-xs font-semibold text-n3-muted uppercase tracking-wider mb-2">How did it go?</p>
+                  <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">How did it go?</p>
                   <div className="flex gap-2">
                     <button onClick={() => onOutcome(p.id, 'CORRECT')} className="text-xs bg-n3-success/10 hover:bg-n3-success/20 text-n3-success border border-n3-success/20 px-3 py-1.5 rounded-lg transition-colors">✓ Correct</button>
                     <button onClick={() => onOutcome(p.id, 'INCORRECT')} className="text-xs bg-n3-danger/10 hover:bg-n3-danger/20 text-n3-danger border border-n3-danger/20 px-3 py-1.5 rounded-lg transition-colors">✗ Incorrect</button>

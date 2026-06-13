@@ -32,7 +32,7 @@ function StatusChip({ status }: { status: string }) {
 function DirectionIcon({ direction }: { direction: string }) {
   if (direction === 'BULLISH') return <TrendingUp size={13} className="text-n3-success" />;
   if (direction === 'BEARISH') return <TrendingDown size={13} className="text-n3-danger" />;
-  return <Minus size={13} className="text-n3-muted" />;
+  return <Minus size={13} className="text-white/50" />;
 }
 
 function HistoryRow({ p }: { p: PredictionData }) {

@@ -36,7 +36,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
-      <body className="bg-n3-bg text-n3-text antialiased overflow-x-hidden">
+      <body className="bg-[#050816] text-white antialiased overflow-x-hidden">
         <Providers>
           <FirebaseAnalytics />
           {children}

@@ -223,7 +223,7 @@ export default function UserProfileWidget() {
           className="w-full flex items-center justify-center gap-2 bg-n3-primary text-n3-bg py-2 rounded-xl text-sm font-semibold hover:bg-n3-primary/90 disabled:opacity-50 transition-colors"
         >
           {submitting ? (
-            <><span className="w-4 h-4 border-2 border-n3-bg border-t-transparent rounded-full animate-spin" /> Saving…</>
+            <><span className="w-4 h-4 border-2 border-black/60 border-t-transparent rounded-full animate-spin" /> Saving…</>
           ) : submitted ? (
             <><Check size={14} /> Profile updated!</>
           ) : (

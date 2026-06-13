@@ -58,8 +58,8 @@ export default function NewsFeed() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-n3-text">News Feed</h1>
-        <p className="text-n3-muted text-sm mt-1">{total} articles from your sources</p>
+        <h1 className="text-2xl font-bold text-white">News Feed</h1>
+        <p className="text-white/50 text-sm mt-1">{total} articles from your sources</p>
       </div>
 
       {/* Filters */}
@@ -72,7 +72,7 @@ export default function NewsFeed() {
               className={`px-3 py-1.5 rounded text-xs font-medium transition-colors capitalize ${
                 sentiment === s
                   ? 'bg-n3-primary/10 text-n3-primary'
-                  : 'text-n3-muted hover:text-n3-text'
+                  : 'text-white/50 hover:text-white'
               }`}
             >
               {s}
@@ -81,11 +81,11 @@ export default function NewsFeed() {
         </div>
 
         <div className="flex items-center gap-2 liquid-glass-card rounded-lg px-3">
-          <Filter size={14} className="text-n3-muted" />
+          <Filter size={14} className="text-white/50" />
           <select
             value={minImpact}
             onChange={(e) => setMinImpact(parseFloat(e.target.value))}
-            className="bg-transparent text-xs text-n3-muted py-2 outline-none cursor-pointer"
+            className="bg-transparent text-xs text-white/50 py-2 outline-none cursor-pointer"
           >
             <option value={0}>Any impact</option>
             <option value={0.3}>Impact 3+</option>
@@ -104,7 +104,7 @@ export default function NewsFeed() {
         </div>
       ) : articles.length === 0 ? (
         <div className="liquid-glass-card rounded-xl p-10 text-center">
-          <p className="text-n3-muted text-sm">No articles found. Try adjusting filters or add more sources.</p>
+          <p className="text-white/50 text-sm">No articles found. Try adjusting filters or add more sources.</p>
         </div>
       ) : (
         <>

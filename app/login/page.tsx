@@ -20,7 +20,7 @@ function LoginContent() {
   const callbackUrl = params.get('callbackUrl') || '/dashboard';
 
   return (
-    <div className="min-h-screen bg-n3-bg flex items-center justify-center px-4 relative overflow-hidden">
+    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4 relative overflow-hidden">
       {/* Grid background */}
       <div className="absolute inset-0 bg-grid opacity-30" />
       {/* Glow */}
@@ -33,16 +33,16 @@ function LoginContent() {
             <Activity size={20} className="text-n3-primary" />
           </div>
           <div>
-            <div className="font-mono font-bold text-n3-text text-xl tracking-wider">N3RDY</div>
-            <div className="text-[10px] font-mono text-n3-muted tracking-widest uppercase">Market Intelligence</div>
+            <div className="font-mono font-bold text-white text-xl tracking-wider">N3RDY</div>
+            <div className="text-[10px] font-mono text-white/50 tracking-widest uppercase">Market Intelligence</div>
           </div>
         </div>
 
         {/* Card */}
-        <div className="rounded-2xl border border-n3-border bg-n3-card p-8 shadow-card">
+        <div className="rounded-2xl border border-white/10 liquid-glass-card p-8 shadow-card">
           <div className="text-center mb-8">
-            <h1 className="text-xl font-bold text-n3-text mb-2">Operator Access</h1>
-            <p className="text-sm text-n3-muted">Sign in to control your N3RDY intelligence bot</p>
+            <h1 className="text-xl font-bold text-white mb-2">Operator Access</h1>
+            <p className="text-sm text-white/50">Sign in to control your N3RDY intelligence bot</p>
           </div>
 
           <button
@@ -53,13 +53,13 @@ function LoginContent() {
             <span className="text-sm">Continue with Google</span>
           </button>
 
-          <div className="mt-6 pt-6 border-t border-n3-border flex items-center justify-center gap-2 text-xs text-n3-muted">
+          <div className="mt-6 pt-6 border-t border-white/10 flex items-center justify-center gap-2 text-xs text-white/50">
             <Shield size={12} />
             <span>Restricted to authorized operators</span>
           </div>
         </div>
 
-        <p className="text-center text-xs text-n3-muted mt-6">
+        <p className="text-center text-xs text-white/50 mt-6">
           Powered by Claude Fable 5 · N3RDY v2.0
         </p>
       </div>
@@ -69,7 +69,7 @@ function LoginContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-n3-bg" />}>
+    <Suspense fallback={<div className="min-h-screen bg-[#0a0a0a]" />}>
       <LoginContent />
     </Suspense>
   );

@@ -17,7 +17,7 @@ interface EconomicEvent {
 }
 
 const IMPACT_STYLES: Record<string, string> = {
-  low: 'text-n3-muted bg-white/5',
+  low: 'text-white/50 bg-white/5',
   medium: 'text-n3-warning bg-n3-warning/10',
   high: 'text-n3-danger bg-n3-danger/10',
 };

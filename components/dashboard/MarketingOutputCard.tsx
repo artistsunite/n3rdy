@@ -45,21 +45,21 @@ export default function MarketingOutputCard({ agentId, content, aiProvider, crea
               {agent.emoji} {agent.name}
             </span>
           )}
-          <span className="text-xs text-n3-muted/60">{timeAgo(createdAt)}</span>
-          <span className="text-xs text-n3-muted/40">· via {aiProvider}</span>
+          <span className="text-xs text-white/30">{timeAgo(createdAt)}</span>
+          <span className="text-xs text-white/50/40">· via {aiProvider}</span>
         </div>
         <div className="flex items-center gap-2">
           {brief && (
             <button
               onClick={() => setBriefOpen(v => !v)}
-              className="text-xs text-n3-muted hover:text-n3-text transition-colors"
+              className="text-xs text-white/50 hover:text-white transition-colors"
             >
               {briefOpen ? 'Hide brief' : 'Show brief'}
             </button>
           )}
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1 text-xs text-n3-muted hover:text-n3-text transition-colors px-2 py-1 rounded-lg hover:bg-white/5"
+            className="flex items-center gap-1 text-xs text-white/50 hover:text-white transition-colors px-2 py-1 rounded-lg hover:bg-white/5"
           >
             {copied ? <Check size={12} className="text-n3-success" /> : <Copy size={12} />}
             {copied ? 'Copied' : 'Copy'}
@@ -70,14 +70,14 @@ export default function MarketingOutputCard({ agentId, content, aiProvider, crea
       {/* Brief (collapsible) */}
       {brief && briefOpen && (
         <div className="px-4 py-3 bg-white/3 border-b border-white/10">
-          <p className="text-xs text-n3-muted uppercase tracking-wider mb-1.5 font-semibold">Your Brief</p>
-          <p className="text-xs text-n3-text/80 leading-relaxed">{brief}</p>
+          <p className="text-xs text-white/50 uppercase tracking-wider mb-1.5 font-semibold">Your Brief</p>
+          <p className="text-xs text-white/80 leading-relaxed">{brief}</p>
         </div>
       )}
 
       {/* Output content */}
       <div className="px-4 py-4">
-        <div className="text-sm text-n3-text leading-relaxed whitespace-pre-wrap font-sans">
+        <div className="text-sm text-white leading-relaxed whitespace-pre-wrap font-sans">
           {content}
         </div>
       </div>
