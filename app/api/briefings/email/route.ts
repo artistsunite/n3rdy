@@ -40,7 +40,7 @@ export async function POST() {
     await sendBriefingEmail({
       toEmail,
       toName,
-      briefing: briefing.content as Parameters<typeof sendBriefingEmail>[0]['briefing'],
+      briefing: briefing.content as unknown as Parameters<typeof sendBriefingEmail>[0]['briefing'],
     });
     return NextResponse.json({ ok: true, sentTo: toEmail });
   } catch (err) {
