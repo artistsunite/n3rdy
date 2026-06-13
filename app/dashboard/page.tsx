@@ -11,7 +11,7 @@ export default async function DashboardPage() {
 
   return (
     <DashboardShell userName={session.user.name} userImage={session.user.image}>
-      <OverviewPanel />
+      <OverviewPanel userName={session.user.name} />
     </DashboardShell>
   );
 }
