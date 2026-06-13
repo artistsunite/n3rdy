@@ -47,10 +47,16 @@ export async function POST(req: NextRequest) {
       country: prefs?.country,
     });
 
+    const dbData = {
+      summary: result.summary,
+      interests: JSON.stringify(result.interests),
+      businessFocus: JSON.stringify(result.businessFocus),
+      profileScore: result.profileScore,
+    };
     const profile = await prisma.userAIProfile.upsert({
       where: { userId },
-      create: { userId, ...result },
-      update: { ...result },
+      create: { userId, ...dbData },
+      update: { ...dbData },
     });
 
     return NextResponse.json({ profile });
