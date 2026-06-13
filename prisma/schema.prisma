@@ -32,7 +32,8 @@ model User {
   competitorEvents    CompetitorEvent[]
   growthOpportunities GrowthOpportunity[]
   growthExperiments   GrowthExperiment[]
-  advisorReports      AdvisorReport[]
+  advisorReports        AdvisorReport[]
+  advisorConversations  AdvisorConversation[]
 }
 
 model UserPreferences {
@@ -507,4 +508,27 @@ model AdvisorReport {
   isRead      Boolean  @default(false)
 
   @@index([userId, generatedAt(sort: Desc)])
+}
+
+model AdvisorConversation {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  messages  AdvisorMessage[]
+
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model AdvisorMessage {
+  id             String              @id @default(cuid())
+  conversationId String
+  conversation   AdvisorConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String
+  content        String              @db.Text
+  createdAt      DateTime            @default(now())
+
+  @@index([conversationId, createdAt])
 }
