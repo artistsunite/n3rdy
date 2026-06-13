@@ -24,12 +24,29 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id } = await params;
-  const body = await req.json() as Record<string, unknown>;
+  const body = await req.json() as {
+    name?: string;
+    website?: string | null;
+    pricingUrl?: string | null;
+    blogUrl?: string | null;
+    productUrl?: string | null;
+    description?: string | null;
+    isActive?: boolean;
+  };
 
   const competitor = await db.competitor.findFirst({ where: { id, userId: session.user.id } });
   if (!competitor) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  const updated = await db.competitor.update({ where: { id }, data: body });
+  const data = {
+    ...(body.name !== undefined ? { name: body.name } : {}),
+    ...(body.website !== undefined ? { website: body.website } : {}),
+    ...(body.pricingUrl !== undefined ? { pricingUrl: body.pricingUrl } : {}),
+    ...(body.blogUrl !== undefined ? { blogUrl: body.blogUrl } : {}),
+    ...(body.productUrl !== undefined ? { productUrl: body.productUrl } : {}),
+    ...(body.description !== undefined ? { description: body.description } : {}),
+    ...(body.isActive !== undefined ? { isActive: body.isActive } : {}),
+  };
+  const updated = await db.competitor.update({ where: { id }, data });
   return NextResponse.json({ competitor: updated });
 }
 
