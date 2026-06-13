@@ -18,7 +18,7 @@ interface ArticleCardProps {
 const SENTIMENT_STYLES: Record<string, string> = {
   positive: 'text-n3-success bg-n3-success/10 border-n3-success/20',
   negative: 'text-n3-danger bg-n3-danger/10 border-n3-danger/20',
-  neutral: 'text-n3-muted bg-white/5 border-n3-border',
+  neutral: 'text-n3-muted bg-white/5 border-white/10',
 };
 
 const RISK_STYLES: Record<string, string> = {
@@ -58,7 +58,7 @@ export default function ArticleCard({
   })();
 
   return (
-    <div className="bg-n3-card border border-n3-border rounded-xl p-4 hover:border-n3-primary/30 transition-colors group">
+    <div className="liquid-glass-card rounded-xl p-4 hover:shadow-[inset_0_1px_0_rgba(0,229,255,0.15)] transition-all group">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1.5">

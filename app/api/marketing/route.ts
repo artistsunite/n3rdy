@@ -36,8 +36,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unknown agent ID' }, { status: 400 });
   }
 
-  // Fetch user context for personalisation
-  const prefs = await db.userPreferences.findUnique({ where: { userId: uid } });
+  // Fetch user context and agent profile for personalisation
+  const [prefs, agentInsights] = await Promise.all([
+    db.userPreferences.findUnique({ where: { userId: uid } }),
+    db.userInsight.findMany({
+      where: { userId: uid, context: `marketing:${agentId}`, answeredAt: { not: null } },
+    }),
+  ]);
+
+  const agentProfile = agentInsights.map(i => ({ question: i.question, answer: i.answer ?? '' }));
 
   let result: { content: string; aiProvider: string };
   try {
@@ -46,6 +53,7 @@ export async function POST(req: NextRequest) {
       agentSystemPrompt: agent.systemPrompt,
       brief: brief.trim(),
       userContext: { businessType: prefs?.businessType, industry: prefs?.industry },
+      agentProfile: agentProfile.length > 0 ? agentProfile : undefined,
     });
   } catch (err) {
     console.error('[marketing] AI error:', err);

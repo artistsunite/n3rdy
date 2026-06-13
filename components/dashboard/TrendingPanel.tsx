@@ -33,17 +33,17 @@ export default function TrendingPanel() {
 
       {loading ? (
         <div className="space-y-2">
-          {[1, 2, 3, 4, 5].map((i) => <div key={i} className="h-12 bg-n3-card border border-n3-border rounded-xl animate-pulse" />)}
+          {[1, 2, 3, 4, 5].map((i) => <div key={i} className="h-12 liquid-glass-card rounded-xl animate-pulse" />)}
         </div>
       ) : topics.length === 0 ? (
-        <div className="bg-n3-card border border-dashed border-n3-border rounded-xl p-10 text-center">
+        <div className="liquid-glass-card rounded-xl p-10 text-center">
           <TrendingUp size={32} className="text-n3-muted mx-auto mb-3" />
           <p className="text-n3-muted text-sm">No trending topics yet. Ingest and analyse articles to see trends.</p>
         </div>
       ) : (
         <div className="space-y-2">
           {topics.map((topic, i) => (
-            <div key={topic.id} className="bg-n3-card border border-n3-border rounded-xl px-4 py-3 flex items-center gap-4">
+            <div key={topic.id} className="liquid-glass-card rounded-xl px-4 py-3 flex items-center gap-4">
               <div className="text-sm font-bold text-n3-muted w-6 flex-shrink-0">#{i + 1}</div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
@@ -54,7 +54,7 @@ export default function TrendingPanel() {
                   </span>
                 </div>
                 {/* Bar */}
-                <div className="h-1 bg-n3-border rounded-full overflow-hidden">
+                <div className="h-1 bg-white/10 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-n3-primary rounded-full transition-all"
                     style={{ width: `${(topic.mentionCount / max) * 100}%` }}

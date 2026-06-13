@@ -41,19 +41,19 @@ export default function FeedbackCard({ prediction: p, onOutcome, onFeedback }: P
     setSubmittingFeedback(null);
   };
 
-  const dirColor = p.direction === 'BULLISH' ? 'text-n3-success' : p.direction === 'BEARISH' ? 'text-n3-danger' : 'text-n3-muted';
+  const dirColor = p.direction === 'BULLISH' ? 'text-n3-success' : p.direction === 'BEARISH' ? 'text-n3-danger' : 'text-white/50';
 
   return (
-    <div className="bg-n3-card border border-amber-400/20 rounded-xl p-4 space-y-4">
+    <div className="liquid-glass-card border border-amber-400/20 rounded-xl p-4 space-y-4">
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <span className={`text-sm font-semibold ${dirColor}`}>{p.direction}</span>
-            <span className="text-sm text-n3-text">{p.target}</span>
-            <span className="text-xs text-n3-muted">· {p.timeframe}</span>
+            <span className="text-sm text-white">{p.target}</span>
+            <span className="text-xs text-white/50">· {p.timeframe}</span>
           </div>
-          <p className="text-xs text-n3-muted mt-0.5">
+          <p className="text-xs text-white/50 mt-0.5">
             Expired · {autoOutcome ? `Auto-assessed: ${autoOutcome}` : 'Awaiting your input'}
           </p>
         </div>
@@ -63,7 +63,7 @@ export default function FeedbackCard({ prediction: p, onOutcome, onFeedback }: P
       {/* Outcome buttons (if no user outcome yet) */}
       {p.status !== 'CORRECT' && p.status !== 'INCORRECT' && (
         <div>
-          <p className="text-xs text-n3-muted mb-2">Confirm outcome:</p>
+          <p className="text-xs text-white/50 mb-2">Confirm outcome:</p>
           <div className="flex gap-2 flex-wrap">
             {(['CORRECT', 'INCORRECT', 'PARTIAL'] as const).map(o => (
               <button
@@ -84,8 +84,8 @@ export default function FeedbackCard({ prediction: p, onOutcome, onFeedback }: P
 
       {/* AI feedback questions */}
       {unansweredFeedback.map(fb => (
-        <div key={fb.id} className="border-t border-n3-border pt-3 space-y-2">
-          <p className="text-sm text-n3-text leading-relaxed">"{fb.question}"</p>
+        <div key={fb.id} className="border-t border-white/10 pt-3 space-y-2">
+          <p className="text-sm text-white leading-relaxed">"{fb.question}"</p>
           <AnimatePresence>
             {submittedFeedback[fb.id] ? (
               <motion.div
@@ -99,7 +99,7 @@ export default function FeedbackCard({ prediction: p, onOutcome, onFeedback }: P
             ) : (
               <motion.div initial={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex gap-2">
                 <input
-                  className="flex-1 text-sm bg-white/5 border border-n3-border rounded-lg px-3 py-2 text-n3-text placeholder:text-n3-muted/50 focus:outline-none focus:border-n3-primary/50 min-w-0"
+                  className="flex-1 text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder:text-white/30 focus:outline-none focus:border-n3-primary/50 min-w-0"
                   placeholder="Your answer…"
                   value={answers[fb.id] ?? ''}
                   onChange={e => setAnswers(prev => ({ ...prev, [fb.id]: e.target.value }))}

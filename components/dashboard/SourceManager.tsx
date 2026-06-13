@@ -53,38 +53,38 @@ export default function SourceManager() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-n3-text">Sources</h1>
-        <p className="text-n3-muted text-sm mt-1">Manage RSS feeds and news sources powering your intelligence feed</p>
+        <h1 className="text-2xl font-bold text-white">Sources</h1>
+        <p className="text-white/50 text-sm mt-1">Manage RSS feeds and news sources powering your intelligence feed</p>
       </div>
 
       {/* Add form */}
-      <div className="bg-n3-card border border-n3-border rounded-xl p-5">
-        <h2 className="text-sm font-semibold text-n3-text mb-4">Add Source</h2>
+      <div className="liquid-glass-card rounded-xl p-5">
+        <h2 className="text-sm font-semibold text-white mb-4">Add Source</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
           <input
             placeholder="Source name (e.g. Reuters)"
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            className="bg-n3-bg border border-n3-border text-n3-text text-sm px-3 py-2 rounded-lg outline-none focus:border-n3-primary/50 transition-colors placeholder:text-n3-muted"
+            className="bg-white/5 border border-white/10 text-white text-sm px-3 py-2 rounded-lg outline-none focus:border-n3-primary/50 transition-colors placeholder:text-white/30"
           />
           <input
             placeholder="Website URL"
             value={form.url}
             onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))}
-            className="bg-n3-bg border border-n3-border text-n3-text text-sm px-3 py-2 rounded-lg outline-none focus:border-n3-primary/50 transition-colors placeholder:text-n3-muted"
+            className="bg-white/5 border border-white/10 text-white text-sm px-3 py-2 rounded-lg outline-none focus:border-n3-primary/50 transition-colors placeholder:text-white/30"
           />
           <input
             placeholder="RSS feed URL (optional)"
             value={form.rssUrl}
             onChange={(e) => setForm((f) => ({ ...f, rssUrl: e.target.value }))}
-            className="bg-n3-bg border border-n3-border text-n3-text text-sm px-3 py-2 rounded-lg outline-none focus:border-n3-primary/50 transition-colors placeholder:text-n3-muted"
+            className="bg-white/5 border border-white/10 text-white text-sm px-3 py-2 rounded-lg outline-none focus:border-n3-primary/50 transition-colors placeholder:text-white/30"
           />
           <select
             value={form.category}
             onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-            className="bg-n3-bg border border-n3-border text-n3-text text-sm px-3 py-2 rounded-lg outline-none focus:border-n3-primary/50 transition-colors"
+            className="bg-white/5 border border-white/10 text-white text-sm px-3 py-2 rounded-lg outline-none focus:border-n3-primary/50 transition-colors"
           >
-            {CATEGORIES.map((c) => <option key={c} value={c} className="bg-n3-bg capitalize">{c}</option>)}
+            {CATEGORIES.map((c) => <option key={c} value={c} className="bg-[#111] capitalize">{c}</option>)}
           </select>
         </div>
         <button
@@ -100,38 +100,38 @@ export default function SourceManager() {
       {/* Source list */}
       {loading ? (
         <div className="space-y-2">
-          {[1, 2, 3].map((i) => <div key={i} className="h-16 bg-n3-card border border-n3-border rounded-xl animate-pulse" />)}
+          {[1, 2, 3].map((i) => <div key={i} className="h-16 liquid-glass-card rounded-xl animate-pulse" />)}
         </div>
       ) : sources.length === 0 ? (
-        <div className="bg-n3-card border border-dashed border-n3-border rounded-xl p-8 text-center">
-          <Rss size={28} className="text-n3-muted mx-auto mb-2" />
-          <p className="text-n3-muted text-sm">No sources yet. Add your first RSS feed above.</p>
+        <div className="liquid-glass-card border border-dashed border-white/15 rounded-xl p-8 text-center">
+          <Rss size={28} className="text-white/30 mx-auto mb-2" />
+          <p className="text-white/50 text-sm">No sources yet. Add your first RSS feed above.</p>
         </div>
       ) : (
         <div className="space-y-2">
           {sources.map((source) => (
-            <div key={source.id} className="flex items-center gap-3 bg-n3-card border border-n3-border rounded-xl px-4 py-3 group">
+            <div key={source.id} className="flex items-center gap-3 liquid-glass-card rounded-xl px-4 py-3 group">
               <Rss size={16} className="text-n3-primary flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-n3-text truncate">{source.name}</span>
-                  <span className="text-xs bg-white/5 text-n3-muted px-1.5 py-0.5 rounded capitalize flex-shrink-0">{source.category}</span>
+                  <span className="text-sm font-medium text-white truncate">{source.name}</span>
+                  <span className="text-xs bg-white/5 text-white/50 px-1.5 py-0.5 rounded capitalize flex-shrink-0">{source.category}</span>
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs text-n3-muted truncate">{source.url}</span>
+                  <span className="text-xs text-white/50 truncate">{source.url}</span>
                   {source.rssUrl && <span className="text-xs text-n3-success flex-shrink-0">RSS ✓</span>}
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                <span className="text-xs text-n3-muted hidden sm:block">
+                <span className="text-xs text-white/50 hidden sm:block">
                   Trust: <span className={source.trustScore >= 0.8 ? 'text-n3-success' : source.trustScore >= 0.6 ? 'text-n3-warning' : 'text-n3-danger'}>{(source.trustScore * 100).toFixed(0)}%</span>
                 </span>
-                <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-n3-muted hover:text-n3-primary transition-colors">
+                <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-white/50 hover:text-n3-primary transition-colors">
                   <ExternalLink size={14} />
                 </a>
                 <button
                   onClick={() => removeSource(source.id)}
-                  className="text-n3-muted hover:text-n3-danger transition-colors opacity-0 group-hover:opacity-100"
+                  className="text-white/50 hover:text-n3-danger transition-colors opacity-0 group-hover:opacity-100"
                 >
                   <Trash2 size={14} />
                 </button>

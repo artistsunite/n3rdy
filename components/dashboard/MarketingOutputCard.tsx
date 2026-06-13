@@ -36,9 +36,9 @@ export default function MarketingOutputCard({ agentId, content, aiProvider, crea
   }
 
   return (
-    <div className="bg-n3-card border border-n3-border rounded-xl overflow-hidden">
+    <div className="liquid-glass-card rounded-xl overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-n3-border">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
         <div className="flex items-center gap-2">
           {agent && (
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${agent.color} ${agent.textColor}`}>
@@ -69,7 +69,7 @@ export default function MarketingOutputCard({ agentId, content, aiProvider, crea
 
       {/* Brief (collapsible) */}
       {brief && briefOpen && (
-        <div className="px-4 py-3 bg-white/3 border-b border-n3-border">
+        <div className="px-4 py-3 bg-white/3 border-b border-white/10">
           <p className="text-xs text-n3-muted uppercase tracking-wider mb-1.5 font-semibold">Your Brief</p>
           <p className="text-xs text-n3-text/80 leading-relaxed">{brief}</p>
         </div>

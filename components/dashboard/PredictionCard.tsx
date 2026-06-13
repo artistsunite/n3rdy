@@ -119,7 +119,7 @@ export default function PredictionCard({ prediction: p, onOutcome }: Props) {
     : null;
 
   return (
-    <div className={`bg-n3-card border rounded-xl overflow-hidden transition-colors ${isPending ? 'border-n3-border' : p.status === 'CORRECT' ? 'border-n3-success/30' : p.status === 'INCORRECT' ? 'border-n3-danger/30' : 'border-amber-400/20'}`}>
+    <div className={`liquid-glass-card rounded-xl overflow-hidden transition-all ${!isPending && p.status === 'CORRECT' ? 'shadow-[inset_0_1px_0_rgba(0,255,136,0.2)]' : !isPending && p.status === 'INCORRECT' ? 'shadow-[inset_0_1px_0_rgba(255,77,109,0.2)]' : ''}`}>
       {/* Header row */}
       <button
         className="w-full flex items-start gap-3 px-4 py-3.5 text-left hover:bg-white/2 transition-colors"
@@ -179,7 +179,7 @@ export default function PredictionCard({ prediction: p, onOutcome }: Props) {
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="overflow-hidden border-t border-n3-border"
+            className="overflow-hidden border-t border-white/10"
           >
             <div className="px-4 py-4 space-y-4">
               {/* Reasoning */}

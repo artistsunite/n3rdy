@@ -24,6 +24,9 @@ model User {
   predictions         Prediction[]
   predictionAccuracy  PredictionAccuracy[]
   marketingBriefs     MarketingBrief[]
+  insights            UserInsight[]
+  aiProfile           UserAIProfile?
+  googleIntegration   GoogleIntegration?
 }
 
 model UserPreferences {
@@ -37,6 +40,7 @@ model UserPreferences {
   briefingFrequency Int      @default(60)
   enabledCategories String[] @default(["markets", "crypto", "macro", "geopolitics", "technology"])
   timezone          String   @default("UTC")
+  country           String?
   updatedAt         DateTime @updatedAt
 }
 
@@ -317,4 +321,43 @@ model MarketingOutput {
   aiProvider String         @default("claude")
   createdAt  DateTime       @default(now())
   brief      MarketingBrief @relation(fields: [briefId], references: [id], onDelete: Cascade)
+}
+
+model UserInsight {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question   String    @db.Text
+  category   String    // "foundation" | "marketing" | "market" | "goals" | "lifestyle"
+  context    String?   // null = general; "marketing:content-creator" = agent-specific
+  answer     String?   @db.Text
+  answeredAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+  @@index([userId, category])
+  @@index([userId, context])
+}
+
+model UserAIProfile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  summary       String   @db.Text @default("")
+  interests     String   @db.Text @default("[]")
+  businessFocus String   @db.Text @default("[]")
+  profileScore  Int      @default(0)
+  lastUpdated   DateTime @updatedAt
+}
+
+model GoogleIntegration {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken   String    @db.Text
+  refreshToken  String?   @db.Text
+  tokenExpiry   DateTime?
+  grantedScopes String[]  @default([])
+  connectedAt   DateTime  @default(now())
+  lastSyncAt    DateTime?
 }

@@ -93,7 +93,7 @@ export default function BriefingsPanel() {
       )}
 
       {generating && (
-        <div className="bg-n3-card border border-n3-border rounded-xl p-6 text-center space-y-2">
+        <div className="liquid-glass-card rounded-xl p-6 text-center space-y-2">
           <div className="w-8 h-8 border-2 border-n3-primary border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-sm text-n3-muted">Claude is analysing your news feed and writing your briefing…</p>
           <p className="text-xs text-n3-muted/60">This takes 15–30 seconds</p>
@@ -102,10 +102,10 @@ export default function BriefingsPanel() {
 
       {loading ? (
         <div className="space-y-3">
-          {[1, 2, 3].map((i) => <div key={i} className="h-24 bg-n3-card border border-n3-border rounded-xl animate-pulse" />)}
+          {[1, 2, 3].map((i) => <div key={i} className="h-24 liquid-glass-card rounded-xl animate-pulse" />)}
         </div>
       ) : briefings.length === 0 && !generating ? (
-        <div className="bg-n3-card border border-dashed border-n3-border rounded-xl p-10 text-center">
+        <div className="liquid-glass-card rounded-xl p-10 text-center">
           <FileText size={32} className="text-n3-muted mx-auto mb-3" />
           <p className="text-n3-muted text-sm">No briefings yet.</p>
           <p className="text-n3-muted/60 text-xs mt-1">Make sure your news feed has articles, then click &quot;Generate Now&quot;.</p>
@@ -118,7 +118,7 @@ export default function BriefingsPanel() {
             return (
               <div
                 key={b.id}
-                className={`bg-n3-card border rounded-xl overflow-hidden transition-colors ${b.read ? 'border-n3-border' : 'border-n3-primary/30'}`}
+                className={`liquid-glass-card rounded-xl overflow-hidden transition-all ${!b.read ? 'shadow-[inset_0_1px_0_rgba(0,229,255,0.2)]' : ''}`}
               >
                 <button
                   className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-white/2 transition-colors"
@@ -145,7 +145,7 @@ export default function BriefingsPanel() {
                 </button>
 
                 {isOpen && content && (
-                  <div className="px-5 pb-5 space-y-5 border-t border-n3-border">
+                  <div className="px-5 pb-5 space-y-5 border-t border-white/10">
                     <Section title="Executive Summary">
                       <p className="text-sm text-n3-text leading-relaxed">{content.executiveSummary}</p>
                     </Section>

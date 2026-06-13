@@ -70,7 +70,7 @@ export default function AccuracyDashboard({ accuracy, totalPredictions, correctP
 
   if (totalPredictions === 0) {
     return (
-      <div className="bg-n3-card border border-n3-border rounded-xl p-5 text-center">
+      <div className="liquid-glass-card rounded-xl p-5 text-center">
         <p className="text-sm text-n3-muted">No predictions yet.</p>
         <p className="text-xs text-n3-muted/60 mt-1">Generate predictions to start tracking accuracy.</p>
       </div>
@@ -78,7 +78,7 @@ export default function AccuracyDashboard({ accuracy, totalPredictions, correctP
   }
 
   return (
-    <div className="bg-n3-card border border-n3-border rounded-xl p-5 space-y-5">
+    <div className="liquid-glass-card rounded-xl p-5 space-y-5">
       <h3 className="text-xs font-semibold text-n3-muted uppercase tracking-wider">Accuracy Dashboard</h3>
 
       {/* Overall gauge */}

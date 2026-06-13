@@ -47,7 +47,16 @@ export default function DashboardShell({ children, userName, userImage }: Props)
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen bg-n3-bg overflow-hidden">
+    <div
+      className="flex h-screen overflow-hidden"
+      style={{
+        background: `
+          radial-gradient(ellipse at 15% 0%, rgba(0,229,255,0.05) 0%, transparent 55%),
+          radial-gradient(ellipse at 85% 100%, rgba(139,92,246,0.04) 0%, transparent 55%),
+          #111111
+        `,
+      }}
+    >
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
@@ -58,15 +67,15 @@ export default function DashboardShell({ children, userName, userImage }: Props)
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-30 w-60 bg-n3-card border-r border-n3-border flex flex-col transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:z-auto ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        className={`fixed inset-y-0 left-0 z-30 w-60 liquid-glass-strong flex flex-col transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:z-auto ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
         {/* Logo */}
-        <div className="flex items-center gap-2.5 px-5 py-5 border-b border-n3-border">
-          <div className="w-7 h-7 bg-n3-primary rounded flex items-center justify-center">
-            <Zap size={14} className="text-n3-bg" />
+        <div className="flex items-center gap-2.5 px-5 py-5 border-b border-white/10">
+          <div className="w-7 h-7 bg-[#00E5FF]/20 rounded flex items-center justify-center">
+            <Zap size={14} className="text-[#00E5FF]" />
           </div>
-          <span className="font-bold text-n3-text text-lg tracking-tight">N3RDY</span>
-          <span className="text-xs text-n3-muted ml-auto font-mono">INTEL</span>
+          <span className="font-bold text-white text-lg tracking-tight">N3RDY</span>
+          <span className="text-xs text-white/40 ml-auto font-mono">INTEL</span>
         </div>
 
         {/* Nav */}
@@ -78,10 +87,10 @@ export default function DashboardShell({ children, userName, userImage }: Props)
                 key={href}
                 href={href}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors ${
                   active
-                    ? 'bg-n3-primary/10 text-n3-primary font-medium'
-                    : 'text-n3-muted hover:text-n3-text hover:bg-white/5'
+                    ? 'bg-white/10 text-[#00E5FF] font-medium'
+                    : 'text-white/50 hover:text-white hover:bg-white/5'
                 }`}
               >
                 <Icon size={16} />
@@ -92,17 +101,17 @@ export default function DashboardShell({ children, userName, userImage }: Props)
         </nav>
 
         {/* User */}
-        <div className="px-3 py-4 border-t border-n3-border space-y-0.5">
+        <div className="px-3 py-4 border-t border-white/10 space-y-0.5">
           <Link
             href="/dashboard/settings"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-n3-muted hover:text-n3-text hover:bg-white/5 transition-colors"
+            className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-white/50 hover:text-white hover:bg-white/5 transition-colors"
           >
             <Settings size={16} />
             Settings
           </Link>
           <button
             onClick={() => signOut({ callbackUrl: '/' })}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-n3-muted hover:text-n3-danger hover:bg-n3-danger/10 transition-colors"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-white/50 hover:text-[#FF4D6D] hover:bg-[#FF4D6D]/10 transition-colors"
           >
             <LogOut size={16} />
             Sign out
@@ -112,11 +121,11 @@ export default function DashboardShell({ children, userName, userImage }: Props)
               {userImage ? (
                 <img src={userImage} alt={userName} className="w-7 h-7 rounded-full" />
               ) : (
-                <div className="w-7 h-7 bg-n3-primary/20 rounded-full flex items-center justify-center text-xs text-n3-primary font-semibold">
+                <div className="w-7 h-7 bg-[#00E5FF]/20 rounded-full flex items-center justify-center text-xs text-[#00E5FF] font-semibold">
                   {userName[0].toUpperCase()}
                 </div>
               )}
-              <span className="text-xs text-n3-muted truncate">{userName}</span>
+              <span className="text-xs text-white/40 truncate">{userName}</span>
             </div>
           )}
         </div>
@@ -125,18 +134,18 @@ export default function DashboardShell({ children, userName, userImage }: Props)
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Topbar (mobile) */}
-        <header className="lg:hidden flex items-center gap-3 px-4 py-3 border-b border-n3-border bg-n3-card">
+        <header className="lg:hidden flex items-center gap-3 px-4 py-3 border-b border-white/10 liquid-glass-card">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="text-n3-muted hover:text-n3-text"
+            className="text-white/50 hover:text-white"
           >
             <Menu size={20} />
           </button>
           <div className="flex items-center gap-2">
-            <Zap size={16} className="text-n3-primary" />
-            <span className="font-bold text-n3-text">N3RDY INTEL</span>
+            <Zap size={16} className="text-[#00E5FF]" />
+            <span className="font-bold text-white">N3RDY INTEL</span>
           </div>
-          <Bell size={18} className="ml-auto text-n3-muted" />
+          <Bell size={18} className="ml-auto text-white/40" />
         </header>
 
         {/* Content */}

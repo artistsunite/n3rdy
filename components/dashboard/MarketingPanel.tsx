@@ -4,7 +4,16 @@ import { useState, useEffect, useCallback } from 'react';
 import { Zap, AlertCircle, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import MarketingAgentCard from './MarketingAgentCard';
 import MarketingOutputCard from './MarketingOutputCard';
+import MarketingAgentProfileWidget from './MarketingAgentProfileWidget';
 import { MARKETING_AGENTS } from '@/lib/marketing-agents';
+
+interface AgentInsight {
+  id: string;
+  question: string;
+  answer: string | null;
+  answeredAt: string | null;
+  category: string;
+}
 
 interface HistoryItem {
   id: string;
@@ -39,6 +48,8 @@ export default function MarketingPanel() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [expandedHistory, setExpandedHistory] = useState<Set<string>>(new Set());
+  const [agentProfileMap, setAgentProfileMap] = useState<Record<string, { questions: AgentInsight[]; complete: boolean }>>({});
+  const [loadingProfile, setLoadingProfile] = useState(false);
 
   const selectedAgent = MARKETING_AGENTS.find(a => a.id === selectedAgentId)!;
 
@@ -57,10 +68,41 @@ export default function MarketingPanel() {
 
   useEffect(() => { loadHistory(); }, [loadHistory]);
 
+  const loadAgentProfile = useCallback(async (agentId: string) => {
+    if (agentProfileMap[agentId]) return;
+    setLoadingProfile(true);
+    try {
+      const res = await fetch(`/api/profile/marketing?agentId=${agentId}`);
+      if (res.ok) {
+        const data = await res.json() as { questions: AgentInsight[]; complete: boolean };
+        setAgentProfileMap(prev => ({ ...prev, [agentId]: data }));
+      }
+    } catch { /* non-fatal */ } finally {
+      setLoadingProfile(false);
+    }
+  }, [agentProfileMap]);
+
+  useEffect(() => { loadAgentProfile(selectedAgentId); }, [selectedAgentId, loadAgentProfile]);
+
   function handleSelectAgent(id: string) {
     setSelectedAgentId(id);
     setOutput(null);
     setError(null);
+  }
+
+  function handleProfileComplete() {
+    setAgentProfileMap(prev => {
+      const existing = prev[selectedAgentId];
+      if (!existing) return prev;
+      return { ...prev, [selectedAgentId]: { ...existing, complete: true } };
+    });
+    // Reload to pick up new answered state
+    fetch(`/api/profile/marketing?agentId=${selectedAgentId}`)
+      .then(r => r.json())
+      .then((d: { questions: AgentInsight[]; complete: boolean }) => {
+        setAgentProfileMap(prev => ({ ...prev, [selectedAgentId]: d }));
+      })
+      .catch(() => null);
   }
 
   async function handleSubmit() {
@@ -113,19 +155,19 @@ export default function MarketingPanel() {
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-n3-text">Marketing Division</h1>
-          <p className="text-sm text-n3-muted mt-1">AI marketing specialists from agency-agents · select an expert, describe your challenge</p>
+          <h1 className="text-2xl font-bold text-white">Marketing Division</h1>
+          <p className="text-sm text-white/50 mt-1">AI marketing specialists from agency-agents · select an expert, describe your challenge</p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-n3-border mb-6">
+      <div className="flex gap-1 border-b border-white/10 mb-6">
         {(['studio', 'history'] as const).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors capitalize ${
-              tab === t ? 'border-n3-primary text-n3-text' : 'border-transparent text-n3-muted hover:text-n3-text'
+              tab === t ? 'border-n3-primary text-white' : 'border-transparent text-white/50 hover:text-white'
             }`}
           >
             {t === 'history' ? `History${historyCount > 0 ? ` (${historyCount})` : ''}` : 'Studio'}
@@ -138,13 +180,14 @@ export default function MarketingPanel() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Agent Roster */}
           <div className="lg:col-span-1">
-            <p className="text-xs font-semibold text-n3-muted uppercase tracking-wider mb-3">Select Specialist</p>
+            <p className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">Select Specialist</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
               {MARKETING_AGENTS.map(agent => (
                 <MarketingAgentCard
                   key={agent.id}
                   agent={agent}
                   selected={selectedAgentId === agent.id}
+                  profileComplete={agentProfileMap[agent.id]?.complete}
                   onSelect={handleSelectAgent}
                 />
               ))}
@@ -159,13 +202,38 @@ export default function MarketingPanel() {
                 <span className="text-2xl">{selectedAgent.emoji}</span>
                 <span className={`font-semibold text-base ${selectedAgent.textColor}`}>{selectedAgent.name}</span>
               </div>
-              <p className="text-sm text-n3-muted italic">"{selectedAgent.vibe}"</p>
-              <p className="text-xs text-n3-muted/70 mt-2">{selectedAgent.description}</p>
+              <p className="text-sm text-white/60 italic">"{selectedAgent.vibe}"</p>
+              <p className="text-xs text-white/40 mt-2">{selectedAgent.description}</p>
             </div>
 
-            {/* Brief textarea */}
-            <div className="bg-n3-card border border-n3-border rounded-xl p-4">
-              <label className="block text-xs font-semibold text-n3-muted uppercase tracking-wider mb-2">
+            {/* Agent profile setup — show if profile not yet complete */}
+            {loadingProfile && !agentProfileMap[selectedAgentId] ? (
+              <div className="h-16 liquid-glass-card rounded-xl animate-pulse" />
+            ) : agentProfileMap[selectedAgentId] && !agentProfileMap[selectedAgentId].complete ? (
+              <MarketingAgentProfileWidget
+                agentId={selectedAgentId}
+                agentName={selectedAgent.name}
+                agentEmoji={selectedAgent.emoji}
+                questions={agentProfileMap[selectedAgentId].questions}
+                onComplete={handleProfileComplete}
+              />
+            ) : null}
+
+            {/* Profile context chips — show when complete */}
+            {agentProfileMap[selectedAgentId]?.complete && agentProfileMap[selectedAgentId].questions.some(q => q.answer) && (
+              <div className="flex flex-wrap gap-1.5 px-1">
+                {agentProfileMap[selectedAgentId].questions.filter(q => q.answer).map(q => (
+                  <span key={q.id} className="text-[11px] bg-white/8 text-white/60 px-2 py-0.5 rounded-full">
+                    {q.answer === 'YES' ? '✓' : q.answer === 'NO' ? '✗' : '💬'} {q.answer === 'YES' || q.answer === 'NO' ? q.question.split(' ').slice(0, 5).join(' ') + '…' : q.answer?.slice(0, 30)}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Brief textarea — only shown when profile is complete or no profile system for this agent */}
+            {(!agentProfileMap[selectedAgentId] || agentProfileMap[selectedAgentId].complete) && (
+            <div className="liquid-glass-card rounded-xl p-4">
+              <label className="block text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">
                 Your Brief
               </label>
               <textarea
@@ -173,11 +241,11 @@ export default function MarketingPanel() {
                 onChange={e => setBrief(e.target.value)}
                 placeholder={`Describe what you need from the ${selectedAgent.name}. Be specific: include your product/service, target audience, current situation, and desired outcome.`}
                 rows={5}
-                className="w-full bg-transparent text-sm text-n3-text placeholder:text-n3-muted/40 resize-y outline-none"
+                className="w-full bg-transparent text-sm text-white placeholder:text-white/30 resize-y outline-none"
                 disabled={submitting}
               />
-              <div className="flex items-center justify-between mt-3 pt-3 border-t border-n3-border">
-                <span className="text-xs text-n3-muted/50">{brief.length} chars</span>
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/10">
+                <span className="text-xs text-white/30">{brief.length} chars</span>
                 <button
                   onClick={handleSubmit}
                   disabled={submitting || !brief.trim()}
@@ -201,6 +269,7 @@ export default function MarketingPanel() {
                 </button>
               </div>
             </div>
+            )}
 
             {/* Error */}
             {error && (
@@ -230,15 +299,15 @@ export default function MarketingPanel() {
           {loadingHistory && (
             <div className="space-y-3">
               {[1, 2, 3].map(i => (
-                <div key={i} className="h-20 bg-n3-card border border-n3-border rounded-xl animate-pulse" />
+                <div key={i} className="h-20 liquid-glass-card rounded-xl animate-pulse" />
               ))}
             </div>
           )}
 
           {!loadingHistory && history.length === 0 && (
-            <div className="bg-n3-card border border-n3-border rounded-xl p-8 text-center">
-              <p className="text-n3-muted text-sm">No marketing outputs yet.</p>
-              <p className="text-n3-muted/60 text-xs mt-1">Submit a brief in the Studio tab to get started.</p>
+            <div className="liquid-glass-card rounded-xl p-8 text-center">
+              <p className="text-white/50 text-sm">No marketing outputs yet.</p>
+              <p className="text-white/30 text-xs mt-1">Submit a brief in the Studio tab to get started.</p>
             </div>
           )}
 
@@ -246,7 +315,7 @@ export default function MarketingPanel() {
             const agent = MARKETING_AGENTS.find(a => a.id === item.agentId);
             const isExpanded = expandedHistory.has(item.id);
             return (
-              <div key={item.id} className="bg-n3-card border border-n3-border rounded-xl overflow-hidden">
+              <div key={item.id} className="liquid-glass-card rounded-xl overflow-hidden">
                 <button
                   className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-white/2 transition-colors"
                   onClick={() => toggleHistoryExpand(item.id)}
@@ -258,23 +327,23 @@ export default function MarketingPanel() {
                           {agent.emoji} {agent.name}
                         </span>
                       )}
-                      <span className="text-xs text-n3-muted/60">{timeAgo(item.createdAt)}</span>
+                      <span className="text-xs text-white/40">{timeAgo(item.createdAt)}</span>
                     </div>
-                    <p className="text-sm text-n3-text truncate">{item.brief}</p>
+                    <p className="text-sm text-white truncate">{item.brief}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <button
                       onClick={e => { e.stopPropagation(); handleDelete(item.id); }}
-                      className="p-1.5 text-n3-muted hover:text-n3-danger transition-colors rounded-lg hover:bg-n3-danger/10"
+                      className="p-1.5 text-white/50 hover:text-n3-danger transition-colors rounded-lg hover:bg-n3-danger/10"
                     >
                       <Trash2 size={13} />
                     </button>
-                    {isExpanded ? <ChevronUp size={14} className="text-n3-muted" /> : <ChevronDown size={14} className="text-n3-muted" />}
+                    {isExpanded ? <ChevronUp size={14} className="text-white/50" /> : <ChevronDown size={14} className="text-white/50" />}
                   </div>
                 </button>
 
                 {isExpanded && item.output && (
-                  <div className="border-t border-n3-border">
+                  <div className="border-t border-white/10">
                     <MarketingOutputCard
                       agentId={item.agentId}
                       content={item.output.content}
@@ -286,8 +355,8 @@ export default function MarketingPanel() {
                 )}
 
                 {isExpanded && !item.output && (
-                  <div className="border-t border-n3-border px-4 py-3">
-                    <p className="text-xs text-n3-muted">No output recorded for this brief.</p>
+                  <div className="border-t border-white/10 px-4 py-3">
+                    <p className="text-xs text-white/50">No output recorded for this brief.</p>
                   </div>
                 )}
               </div>

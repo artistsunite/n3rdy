@@ -46,40 +46,40 @@ export default function EconomicCalendar() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-n3-text">Economic Calendar</h1>
-        <p className="text-n3-muted text-sm mt-1">Upcoming market-moving events — next 7 days</p>
+        <h1 className="text-2xl font-bold text-white">Economic Calendar</h1>
+        <p className="text-white/50 text-sm mt-1">Upcoming market-moving events — next 7 days</p>
       </div>
 
       {loading ? (
         <div className="space-y-3">
-          {[1, 2, 3].map((i) => <div key={i} className="h-20 bg-n3-card border border-n3-border rounded-xl animate-pulse" />)}
+          {[1, 2, 3].map((i) => <div key={i} className="h-20 liquid-glass-card rounded-xl animate-pulse" />)}
         </div>
       ) : events.length === 0 ? (
-        <div className="bg-n3-card border border-dashed border-n3-border rounded-xl p-10 text-center">
-          <Calendar size={32} className="text-n3-muted mx-auto mb-3" />
-          <p className="text-n3-muted text-sm">No upcoming events. Economic events will appear here as they are added.</p>
+        <div className="liquid-glass-card border border-dashed border-white/15 rounded-xl p-10 text-center">
+          <Calendar size={32} className="text-white/30 mx-auto mb-3" />
+          <p className="text-white/50 text-sm">No upcoming events. Economic events will appear here as they are added.</p>
         </div>
       ) : (
         <div className="space-y-5">
           {Object.entries(grouped).map(([date, dayEvents]) => (
             <div key={date}>
-              <div className="text-xs font-semibold text-n3-muted uppercase tracking-wider mb-2">{date}</div>
+              <div className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2">{date}</div>
               <div className="space-y-2">
                 {dayEvents.map((event) => (
-                  <div key={event.id} className="bg-n3-card border border-n3-border rounded-xl px-4 py-3">
+                  <div key={event.id} className="liquid-glass-card rounded-xl px-4 py-3">
                     <div className="flex items-start gap-3">
                       <div className="text-xl flex-shrink-0">{COUNTRY_FLAGS[event.country] ?? '🌍'}</div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-medium text-n3-text">{event.title}</span>
+                          <span className="text-sm font-medium text-white">{event.title}</span>
                           <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${IMPACT_STYLES[event.marketImpact] ?? IMPACT_STYLES.medium}`}>
                             {event.marketImpact} impact
                           </span>
                         </div>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-n3-muted">
+                        <div className="flex items-center gap-3 mt-1 text-xs text-white/50">
                           <span>{new Date(event.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} UTC</span>
-                          {event.forecast && <span>Forecast: <span className="text-n3-text">{event.forecast}</span></span>}
-                          {event.previous && <span>Previous: <span className="text-n3-text">{event.previous}</span></span>}
+                          {event.forecast && <span>Forecast: <span className="text-white">{event.forecast}</span></span>}
+                          {event.previous && <span>Previous: <span className="text-white">{event.previous}</span></span>}
                           {event.actual && <span className="text-n3-success">Actual: {event.actual}</span>}
                         </div>
                         {event.assetsAffected.length > 0 && (

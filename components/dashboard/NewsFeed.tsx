@@ -64,7 +64,7 @@ export default function NewsFeed() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
-        <div className="flex gap-1 bg-n3-card border border-n3-border rounded-lg p-1">
+        <div className="flex gap-1 liquid-glass-card rounded-lg p-1">
           {SENTIMENTS.map((s) => (
             <button
               key={s}
@@ -80,7 +80,7 @@ export default function NewsFeed() {
           ))}
         </div>
 
-        <div className="flex items-center gap-2 bg-n3-card border border-n3-border rounded-lg px-3">
+        <div className="flex items-center gap-2 liquid-glass-card rounded-lg px-3">
           <Filter size={14} className="text-n3-muted" />
           <select
             value={minImpact}
@@ -99,11 +99,11 @@ export default function NewsFeed() {
       {loading && articles.length === 0 ? (
         <div className="space-y-3">
           {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-28 bg-n3-card border border-n3-border rounded-xl animate-pulse" />
+            <div key={i} className="h-28 liquid-glass-card rounded-xl animate-pulse" />
           ))}
         </div>
       ) : articles.length === 0 ? (
-        <div className="bg-n3-card border border-dashed border-n3-border rounded-xl p-10 text-center">
+        <div className="liquid-glass-card rounded-xl p-10 text-center">
           <p className="text-n3-muted text-sm">No articles found. Try adjusting filters or add more sources.</p>
         </div>
       ) : (
@@ -131,7 +131,7 @@ export default function NewsFeed() {
             <button
               onClick={() => load(false)}
               disabled={loading}
-              className="w-full py-3 border border-n3-border text-n3-muted text-sm rounded-xl hover:border-n3-primary/40 hover:text-n3-primary transition-colors disabled:opacity-50"
+              className="w-full py-3 liquid-glass-card text-white/50 text-sm rounded-xl hover:text-n3-primary transition-colors disabled:opacity-50"
             >
               {loading ? 'Loading...' : `Load more (${total - articles.length} remaining)`}
             </button>

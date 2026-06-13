@@ -117,8 +117,8 @@ export default function PredictionsPanel() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-n3-text">Predictions</h1>
-          <p className="text-n3-muted text-sm mt-1">AI-powered market calls, self-calibrated over time</p>
+          <h1 className="text-2xl font-bold text-white">Predictions</h1>
+          <p className="text-white/50 text-sm mt-1">AI-powered market calls, self-calibrated over time</p>
         </div>
         <button
           onClick={generate}
@@ -138,10 +138,10 @@ export default function PredictionsPanel() {
       )}
 
       {generating && (
-        <div className="bg-n3-card border border-n3-border rounded-xl p-6 text-center space-y-2">
+        <div className="liquid-glass-card rounded-xl p-6 text-center space-y-2">
           <div className="w-8 h-8 border-2 border-n3-primary border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-n3-muted">Analysing your watchlist and news feed…</p>
-          <p className="text-xs text-n3-muted/60">This takes 15–30 seconds</p>
+          <p className="text-sm text-white/50">Analysing your watchlist and news feed…</p>
+          <p className="text-xs text-white/30">This takes 15–30 seconds</p>
         </div>
       )}
 
@@ -160,12 +160,12 @@ export default function PredictionsPanel() {
           {/* Right: tabs + content */}
           <div className="flex-1 min-w-0 space-y-4">
             {/* Tabs */}
-            <div className="flex gap-1 border-b border-n3-border">
+            <div className="flex gap-1 border-b border-white/10">
               {TABS.map(t => (
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id)}
-                  className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t.id ? 'border-n3-primary text-n3-text' : 'border-transparent text-n3-muted hover:text-n3-text'}`}
+                  className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t.id ? 'border-n3-primary text-white' : 'border-transparent text-white/50 hover:text-white'}`}
                 >
                   {t.label}
                   {t.count !== undefined && t.count > 0 && (
@@ -181,10 +181,10 @@ export default function PredictionsPanel() {
             {tab === 'active' && (
               <div className="space-y-3">
                 {active.length === 0 && !generating ? (
-                  <div className="bg-n3-card border border-dashed border-n3-border rounded-xl p-10 text-center">
-                    <Zap size={32} className="text-n3-muted mx-auto mb-3" />
-                    <p className="text-n3-muted text-sm">No active predictions.</p>
-                    <p className="text-n3-muted/60 text-xs mt-1">Click "Generate Now" to create your first batch.</p>
+                  <div className="liquid-glass-card border border-dashed border-white/15 rounded-xl p-10 text-center">
+                    <Zap size={32} className="text-white/30 mx-auto mb-3" />
+                    <p className="text-white/50 text-sm">No active predictions.</p>
+                    <p className="text-white/30 text-xs mt-1">Click "Generate Now" to create your first batch.</p>
                   </div>
                 ) : (
                   active.map(p => <PredictionCard key={p.id} prediction={p} onOutcome={handleOutcome} />)
@@ -197,8 +197,8 @@ export default function PredictionsPanel() {
               <div className="space-y-3">
                 {awaitingFeedback.length === 0 ? (
                   <div className="text-center py-10">
-                    <p className="text-sm text-n3-muted">No predictions awaiting feedback.</p>
-                    <p className="text-xs text-n3-muted/60 mt-1">Once predictions expire, they'll appear here for review.</p>
+                    <p className="text-sm text-white/50">No predictions awaiting feedback.</p>
+                    <p className="text-xs text-white/30 mt-1">Once predictions expire, they'll appear here for review.</p>
                   </div>
                 ) : (
                   awaitingFeedback.map(p => (
@@ -221,7 +221,7 @@ export default function PredictionsPanel() {
 
       {loading && (
         <div className="space-y-3">
-          {[1, 2, 3].map(i => <div key={i} className="h-20 bg-n3-card border border-n3-border rounded-xl animate-pulse" />)}
+          {[1, 2, 3].map(i => <div key={i} className="h-20 liquid-glass-card rounded-xl animate-pulse" />)}
         </div>
       )}
     </div>

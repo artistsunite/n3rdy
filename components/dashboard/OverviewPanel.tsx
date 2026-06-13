@@ -1,11 +1,15 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { TrendingUp, TrendingDown, Minus, Zap, AlertTriangle, FileText, RefreshCw, Loader2 } from 'lucide-react';
-import {
-  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
-} from 'recharts';
+import { TrendingUp, TrendingDown, Minus, RefreshCw, Zap } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import ArticleCard from './ArticleCard';
+import WatchlistActivityWidget from './WatchlistActivityWidget';
+import MarketingCalendarWidget from './MarketingCalendarWidget';
+import TrendingPostWidget from './TrendingPostWidget';
+import UserProfileWidget from './UserProfileWidget';
+import GoogleSyncBanner from './GoogleSyncBanner';
+import ExpandableWidget from './ExpandableWidget';
 
 interface SentimentData {
   overall: number;
@@ -31,22 +35,38 @@ interface Article {
   } | null;
 }
 
-type IngestState = 'idle' | 'fetching' | 'analysing' | 'done' | 'error';
+function greet(): string {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
+}
 
-export default function OverviewPanel() {
+function SentimentArrow({ score }: { score: number }) {
+  if (score > 0.05) return <TrendingUp size={13} className="text-n3-success" />;
+  if (score < -0.05) return <TrendingDown size={13} className="text-n3-danger" />;
+  return <Minus size={13} className="text-white/50" />;
+}
+
+function SentimentLabel({ score }: { score: number }) {
+  if (score > 0.2) return <span className="text-n3-success font-bold">BULLISH</span>;
+  if (score > 0.05) return <span className="text-n3-success/80 font-bold">POSITIVE</span>;
+  if (score < -0.2) return <span className="text-n3-danger font-bold">BEARISH</span>;
+  if (score < -0.05) return <span className="text-n3-danger/80 font-bold">NEGATIVE</span>;
+  return <span className="text-white/60 font-bold">NEUTRAL</span>;
+}
+
+export default function OverviewPanel({ userName }: { userName?: string | null }) {
   const [sentiment, setSentiment] = useState<SentimentData | null>(null);
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-
-  const [ingestState, setIngestState] = useState<IngestState>('idle');
-  const [ingestResult, setIngestResult] = useState<{ articlesIngested: number; articlesAnalyzed: number } | null>(null);
-  const [ingestError, setIngestError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadData = useCallback(async () => {
     const [s, a] = await Promise.all([
-      fetch('/api/sentiment').then((r) => r.json()),
-      fetch('/api/articles?limit=6').then((r) => r.json()),
+      fetch('/api/sentiment').then(r => r.json()),
+      fetch('/api/articles?limit=6').then(r => r.json()),
     ]);
     setSentiment(s);
     setArticles(a.articles ?? []);
@@ -54,257 +74,244 @@ export default function OverviewPanel() {
     return (a.articles ?? []).length as number;
   }, []);
 
-  const runIngest = useCallback(async () => {
-    setIngestState('fetching');
-    setIngestError(null);
-    try {
-      // Give user visual feedback that we're in the fetching phase
-      const timer = setTimeout(() => setIngestState('analysing'), 12000);
-      const res = await fetch('/api/ingest/run', { method: 'POST' });
-      clearTimeout(timer);
-      if (!res.ok) throw new Error(`Ingest failed: ${res.status}`);
-      const data = await res.json();
-      setIngestResult({ articlesIngested: data.articlesIngested, articlesAnalyzed: data.articlesAnalyzed });
-      setIngestState('done');
-      // Reload data with fresh articles
-      await loadData();
-    } catch (err) {
-      setIngestError((err as Error).message);
-      setIngestState('error');
-    }
-  }, [loadData]);
-
   useEffect(() => {
     loadData().then((count) => {
       setLoading(false);
-      // Auto-bootstrap on first visit when DB has no articles yet
-      if (count === 0) runIngest();
-    });
-  }, [loadData, runIngest]);
+      if (count === 0) {
+        // Auto-bootstrap when no articles yet
+        fetch('/api/ingest/run', { method: 'POST' })
+          .then(() => loadData())
+          .catch(() => null);
+      }
+    }).catch(() => setLoading(false));
+  }, [loadData]);
 
-  const refresh = async () => {
-    setIngestState('idle');
-    setIngestResult(null);
-    await runIngest();
-    setLoading(false);
-  };
-
-  const overallSentiment = sentiment?.overall ?? 0;
-  const SentimentIcon = overallSentiment > 0.1 ? TrendingUp : overallSentiment < -0.1 ? TrendingDown : Minus;
-  const sentimentColor = overallSentiment > 0.1 ? 'text-n3-success' : overallSentiment < -0.1 ? 'text-n3-danger' : 'text-n3-muted';
-
-  const chartData = (sentiment?.timeSeries ?? []).map((d) => ({
-    time: new Date(d.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    score: parseFloat(d.avgScore.toFixed(3)),
-    count: d.count,
-  }));
-
-  const isIngesting = ingestState === 'fetching' || ingestState === 'analysing';
-
-  // ── First-time setup screen ──────────────────────────────────────────────
-  if (!loading && articles.length === 0 && isIngesting) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center px-4">
-        <div className="w-16 h-16 bg-n3-primary/10 rounded-2xl flex items-center justify-center">
-          <Loader2 size={32} className="text-n3-primary animate-spin" />
-        </div>
-        <div>
-          <h2 className="text-xl font-bold text-n3-text mb-2">Setting up your intelligence feed</h2>
-          <p className="text-n3-muted text-sm max-w-sm">
-            {ingestState === 'fetching'
-              ? 'Fetching the latest news from your sources…'
-              : 'Running AI analysis on top stories — this takes about 30 seconds…'}
-          </p>
-        </div>
-        <div className="flex gap-2 text-xs text-n3-muted">
-          <span className={`px-2 py-1 rounded-full ${ingestState === 'fetching' ? 'bg-n3-primary/20 text-n3-primary' : 'bg-white/5'}`}>1. Fetching RSS</span>
-          <span className={`px-2 py-1 rounded-full ${ingestState === 'analysing' ? 'bg-n3-primary/20 text-n3-primary' : 'bg-white/5'}`}>2. AI Analysis</span>
-          <span className="px-2 py-1 rounded-full bg-white/5">3. Ready</span>
-        </div>
-      </div>
-    );
+  async function handleRefresh() {
+    setRefreshing(true);
+    await loadData().catch(() => null);
+    setRefreshing(false);
   }
 
-  // ── Error screen ─────────────────────────────────────────────────────────
-  if (!loading && articles.length === 0 && ingestState === 'error') {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-4">
-        <AlertTriangle size={36} className="text-n3-warning" />
-        <div>
-          <h2 className="text-xl font-bold text-n3-text mb-2">Feed initialisation failed</h2>
-          <p className="text-n3-muted text-sm max-w-sm mb-1">{ingestError}</p>
-          <p className="text-n3-muted text-xs max-w-sm">Check that your API keys (ANTHROPIC_API_KEY, DATABASE_URL) are set in Secret Manager.</p>
-        </div>
-        <button
-          onClick={refresh}
-          className="inline-flex items-center gap-2 bg-n3-primary text-n3-bg px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-n3-primary/90 transition-colors"
-        >
-          <RefreshCw size={14} /> Try again
-        </button>
-      </div>
-    );
-  }
+  const overallScore = sentiment?.overall ?? 0;
+  const opportunities = articles.filter(a => (a.analysis?.sentimentScore ?? 0) > 0.3).length;
+  const risks = articles.filter(a => a.analysis?.riskLevel === 'high' || a.analysis?.riskLevel === 'critical').length;
 
-  // ── Normal dashboard ─────────────────────────────────────────────────────
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-n3-text">Intelligence Overview</h1>
-          <p className="text-n3-muted text-sm mt-1">
-            {lastUpdated
-              ? `Updated ${lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-              : 'Last 24 hours across your monitored sources'}
-          </p>
-        </div>
-        <button
-          onClick={refresh}
-          disabled={isIngesting}
-          className="inline-flex items-center gap-2 border border-n3-border text-n3-muted hover:text-n3-text hover:border-n3-primary/40 px-4 py-2 rounded-lg text-sm transition-colors disabled:opacity-50 flex-shrink-0"
-        >
-          {isIngesting
-            ? <Loader2 size={14} className="animate-spin" />
-            : <RefreshCw size={14} />}
-          {isIngesting ? (ingestState === 'fetching' ? 'Fetching…' : 'Analysing…') : 'Refresh feed'}
-        </button>
-      </div>
+  // Sparkline data from timeSeries
+  const sparkData = (sentiment?.timeSeries ?? []).slice(-8);
 
-      {/* Ingest result banner */}
-      {ingestState === 'done' && ingestResult && (
-        <div className="bg-n3-success/10 border border-n3-success/30 rounded-lg px-4 py-3 text-sm text-n3-success flex items-center gap-2">
-          <Zap size={14} />
-          Feed refreshed — {ingestResult.articlesIngested} articles fetched, {ingestResult.articlesAnalyzed} AI-analysed
-        </div>
+  // Stat cards
+  const stats = [
+    {
+      label: 'Industry Pulse',
+      value: <SentimentLabel score={overallScore} />,
+      sub: `Score: ${overallScore >= 0 ? '+' : ''}${overallScore.toFixed(2)}`,
+      icon: <SentimentArrow score={overallScore} />,
+      spark: sparkData,
+    },
+    {
+      label: 'Articles Today',
+      value: <span className="text-white font-bold">{articles.length}</span>,
+      sub: 'in your feed',
+      icon: null,
+      spark: [],
+    },
+    {
+      label: 'Opportunities',
+      value: <span className="text-n3-success font-bold">+{opportunities}</span>,
+      sub: 'bullish signals',
+      icon: null,
+      spark: [],
+    },
+    {
+      label: 'Risk Flags',
+      value: <span className={risks > 0 ? 'text-n3-danger font-bold' : 'text-white/50 font-bold'}>{risks}</span>,
+      sub: risks > 0 ? 'high impact' : 'clear',
+      icon: null,
+      spark: [],
+    },
+  ];
+
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  // Sentiment widget content
+  const sentimentCompact = (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <SentimentArrow score={overallScore} />
+        <SentimentLabel score={overallScore} />
+        <span className="text-xs text-white/40">{overallScore >= 0 ? '+' : ''}{overallScore.toFixed(2)}</span>
+      </div>
+      {sparkData.length > 0 && (
+        <ResponsiveContainer width="100%" height={48}>
+          <AreaChart data={sparkData} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+            <defs>
+              <linearGradient id="sentGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#00E5FF" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#00E5FF" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <Area type="monotone" dataKey="avgScore" stroke="#00E5FF" strokeWidth={1.5} fill="url(#sentGrad)" dot={false} />
+          </AreaChart>
+        </ResponsiveContainer>
       )}
-
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          label="Market Sentiment"
-          value={overallSentiment > 0.1 ? 'Bullish' : overallSentiment < -0.1 ? 'Bearish' : 'Neutral'}
-          sub={overallSentiment.toFixed(2)}
-          icon={<SentimentIcon size={16} className={sentimentColor} />}
-          loading={loading}
-        />
-        <StatCard
-          label="Articles Analysed"
-          value={sentiment?.byCategory.reduce((a, b) => a + b.articleCount, 0)?.toString() ?? '0'}
-          sub="past 24h"
-          icon={<FileText size={16} className="text-n3-primary" />}
-          loading={loading}
-        />
-        <StatCard
-          label="High Impact"
-          value={articles.filter((a) => (a.analysis?.marketImpactScore ?? 0) >= 0.7).length.toString()}
-          sub="stories"
-          icon={<AlertTriangle size={16} className="text-n3-warning" />}
-          loading={loading}
-        />
-        <StatCard
-          label="Breaking"
-          value={articles.filter((a) => (a.analysis?.urgencyScore ?? 0) >= 0.8).length.toString()}
-          sub="urgent alerts"
-          icon={<Zap size={16} className="text-n3-danger" />}
-          loading={loading}
-        />
-      </div>
-
-      {/* Sentiment chart */}
-      {chartData.length > 0 && (
-        <div className="bg-n3-card border border-n3-border rounded-xl p-5">
-          <h2 className="text-sm font-semibold text-n3-text mb-4">Sentiment Trend (24h)</h2>
-          <ResponsiveContainer width="100%" height={180}>
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
-              <XAxis dataKey="time" tick={{ fill: '#94A3B8', fontSize: 11 }} tickLine={false} />
-              <YAxis domain={[-1, 1]} tick={{ fill: '#94A3B8', fontSize: 11 }} tickLine={false} />
-              <Tooltip
-                contentStyle={{ background: '#0B1220', border: '1px solid #1E293B', borderRadius: 8, fontSize: 12 }}
-                labelStyle={{ color: '#F8FAFC' }}
-              />
-              <Line type="monotone" dataKey="score" stroke="#00E5FF" strokeWidth={2} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-
-      {/* Category sentiment */}
-      {sentiment && sentiment.byCategory.length > 0 && (
-        <div className="bg-n3-card border border-n3-border rounded-xl p-5">
-          <h2 className="text-sm font-semibold text-n3-text mb-4">Sentiment by Category</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {sentiment.byCategory.map((c) => (
-              <div key={c.category} className="text-center">
-                <div className="text-xs text-n3-muted uppercase tracking-wider mb-1">{c.category}</div>
-                <div className={`text-sm font-semibold ${c.avgScore > 0.1 ? 'text-n3-success' : c.avgScore < -0.1 ? 'text-n3-danger' : 'text-n3-muted'}`}>
-                  {c.dominant}
-                </div>
-                <div className="text-xs text-n3-muted">{c.articleCount} articles</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Top stories */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-n3-text">Top Stories</h2>
-          <a href="/dashboard/news" className="text-xs text-n3-primary hover:underline">View all</a>
-        </div>
-        {loading || isIngesting ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-24 bg-n3-card border border-n3-border rounded-xl animate-pulse" />
-            ))}
-          </div>
-        ) : articles.length === 0 ? (
-          <div className="bg-n3-card border border-dashed border-n3-border rounded-xl p-8 text-center">
-            <p className="text-n3-muted text-sm mb-3">No analysed articles yet.</p>
-            <button onClick={refresh} className="text-xs text-n3-primary hover:underline">Run ingest now</button>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {articles.map((a) => (
-              <ArticleCard
-                key={a.id}
-                title={a.title}
-                url={a.url}
-                sourceName={a.source.name}
-                publishedAt={a.publishedAt}
-                shortSummary={a.analysis?.shortSummary}
-                sentiment={a.analysis?.sentiment}
-                sentimentScore={a.analysis?.sentimentScore}
-                marketImpactScore={a.analysis?.marketImpactScore}
-                riskLevel={a.analysis?.riskLevel}
-                bullishBearish={a.analysis?.bullishBearish}
-                sectorsAffected={a.analysis?.sectorsAffected as string[]}
-              />
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
-}
 
-function StatCard({ label, value, sub, icon, loading }: {
-  label: string; value: string; sub: string; icon: React.ReactNode; loading: boolean;
-}) {
-  return (
-    <div className="bg-n3-card border border-n3-border rounded-xl p-4">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs text-n3-muted">{label}</span>
-        {icon}
-      </div>
-      {loading ? (
-        <div className="h-7 bg-n3-border rounded animate-pulse w-16" />
+  const sentimentExpanded = (
+    <div className="space-y-4">
+      {sparkData.length > 0 ? (
+        <ResponsiveContainer width="100%" height={100}>
+          <AreaChart data={sparkData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+            <defs>
+              <linearGradient id="sentGradEx" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#00E5FF" stopOpacity={0.25} />
+                <stop offset="95%" stopColor="#00E5FF" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <XAxis dataKey="time" tick={{ fontSize: 9, fill: 'rgba(255,255,255,0.3)' }} tickLine={false} axisLine={false} />
+            <YAxis domain={[-1, 1]} tick={{ fontSize: 9, fill: 'rgba(255,255,255,0.3)' }} tickLine={false} axisLine={false} />
+            <Tooltip
+              contentStyle={{ background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }}
+              formatter={(v: unknown) => [(v as number).toFixed(2), 'Sentiment']}
+            />
+            <Area type="monotone" dataKey="avgScore" stroke="#00E5FF" strokeWidth={2} fill="url(#sentGradEx)" dot={false} />
+          </AreaChart>
+        </ResponsiveContainer>
       ) : (
-        <>
-          <div className="text-xl font-bold text-n3-text">{value}</div>
-          <div className="text-xs text-n3-muted mt-0.5">{sub}</div>
-        </>
+        <p className="text-xs text-white/40 text-center py-4">No time series data yet.</p>
+      )}
+      {(sentiment?.byCategory ?? []).length > 0 && (
+        <div className="grid grid-cols-2 gap-2">
+          {sentiment!.byCategory.map(cat => (
+            <div key={cat.category} className="bg-white/5 rounded-lg px-3 py-2 flex items-center gap-2">
+              <SentimentArrow score={cat.avgScore} />
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-white capitalize truncate">{cat.category}</p>
+                <p className="text-[10px] text-white/40">{cat.articleCount} articles</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const topStoriesCompact = (
+    <div className="space-y-2">
+      {articles.slice(0, 3).map(a => (
+        <a key={a.id} href={a.url} target="_blank" rel="noopener noreferrer" className="flex items-start gap-2 group">
+          <div
+            className={`w-0.5 flex-shrink-0 h-full min-h-[32px] rounded-full ${
+              (a.analysis?.sentimentScore ?? 0) > 0.05 ? 'bg-n3-success' :
+              (a.analysis?.sentimentScore ?? 0) < -0.05 ? 'bg-n3-danger' : 'bg-white/20'
+            }`}
+          />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-white/80 group-hover:text-white transition-colors line-clamp-2 leading-snug">
+              {a.title}
+            </p>
+            <p className="text-[10px] text-white/30 mt-0.5">{a.source.name}</p>
+          </div>
+        </a>
+      ))}
+    </div>
+  );
+
+  const topStoriesExpanded = (
+    <div className="space-y-3">
+      {articles.slice(0, 6).map(a => (
+        <ArticleCard key={a.id} article={a} />
+      ))}
+      {articles.length === 0 && (
+        <p className="text-sm text-white/40 text-center py-4">No articles loaded yet. Refresh to ingest.</p>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white">
+            {greet()}{userName ? `, ${userName.split(' ')[0]}` : ''}
+          </h1>
+          <p className="text-white/40 text-sm mt-1">{dateStr}</p>
+        </div>
+        <div className="flex items-center gap-3">
+          {lastUpdated && (
+            <span className="text-xs text-white/30 hidden sm:block">
+              Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="p-2 liquid-glass-card rounded-xl text-white/50 hover:text-white transition-colors"
+          >
+            <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+          </button>
+        </div>
+      </div>
+
+      {/* Google Sync Banner */}
+      <GoogleSyncBanner />
+
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {stats.map((stat, i) => (
+          <div key={i} className="liquid-glass-card rounded-2xl p-4 space-y-1">
+            <p className="text-xs text-white/40 font-medium">{stat.label}</p>
+            <div className="flex items-center gap-1.5">
+              {stat.icon}
+              <span className="text-sm">{stat.value}</span>
+            </div>
+            <p className="text-[11px] text-white/30">{stat.sub}</p>
+            {stat.spark.length > 0 && (
+              <div className="pt-1">
+                <ResponsiveContainer width="100%" height={28}>
+                  <AreaChart data={stat.spark} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+                    <defs>
+                      <linearGradient id={`sg${i}`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#00E5FF" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#00E5FF" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <Area type="monotone" dataKey="avgScore" stroke="#00E5FF" strokeWidth={1} fill={`url(#sg${i})`} dot={false} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className="h-48 liquid-glass-card rounded-2xl animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <WatchlistActivityWidget />
+          <MarketingCalendarWidget />
+          <TrendingPostWidget />
+          <UserProfileWidget />
+          <ExpandableWidget
+            title="Sentiment Pulse"
+            icon={<Zap size={14} />}
+            compactContent={sentimentCompact}
+            expandedContent={sentimentExpanded}
+          />
+          <ExpandableWidget
+            title="Top Stories"
+            icon={<TrendingUp size={14} />}
+            compactContent={topStoriesCompact}
+            expandedContent={topStoriesExpanded}
+          />
+        </div>
       )}
     </div>
   );

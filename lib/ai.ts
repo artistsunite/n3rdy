@@ -406,14 +406,19 @@ export async function runMarketingAgent(params: {
   agentSystemPrompt: string;
   brief: string;
   userContext?: { businessType?: string | null; industry?: string | null };
+  agentProfile?: Array<{ question: string; answer: string }>;
 }): Promise<MarketingAgentResult> {
-  const { agentSystemPrompt, brief, userContext } = params;
+  const { agentSystemPrompt, brief, userContext, agentProfile } = params;
 
   const contextBlock = userContext?.businessType || userContext?.industry
     ? `\nUSER CONTEXT\nBusiness type: ${userContext.businessType ?? 'not specified'}\nIndustry: ${userContext.industry ?? 'not specified'}\n`
     : '';
 
-  const userMessage = `${contextBlock}\nBRIEF FROM USER:\n${brief}`;
+  const profileBlock = agentProfile && agentProfile.length > 0
+    ? `\n=== User Business Profile ===\n${agentProfile.map(a => `Q: ${a.question}\n→ ${a.answer}`).join('\n')}\n`
+    : '';
+
+  const userMessage = `${contextBlock}${profileBlock}\n=== User's Brief ===\n${brief}`;
 
   let text: string;
   let aiProvider = 'claude';
@@ -548,4 +553,105 @@ Return ONLY valid JSON with this exact structure:
   }
 
   return JSON.parse(extractJSON(text)) as BriefingContent;
+}
+
+export interface TrendingPostResult {
+  post: string;
+  hashtags: string[];
+  tip: string;
+}
+
+export async function generateTrendingPost(params: {
+  topic: string;
+  topicSentiment?: string;
+  businessType?: string | null;
+  industry?: string | null;
+}): Promise<TrendingPostResult> {
+  const { topic, topicSentiment, businessType, industry } = params;
+  const prompt = `You are a social media copywriter for small businesses. Write ONE engaging social post about "${topic}" (sentiment: ${topicSentiment ?? 'neutral'}) for a ${businessType ?? 'small business'} in the ${industry ?? 'general'} industry.
+Include 3-5 relevant hashtags. Keep the post under 280 characters.
+Return ONLY valid JSON in this exact format: {"post":"...","hashtags":["#tag1","#tag2","#tag3"],"tip":"one short tip on when/how to post this"}`;
+
+  let text: string;
+  try {
+    const message = await client.messages.create({ model: 'claude-opus-4-8', max_tokens: 400, messages: [{ role: 'user', content: prompt }] });
+    text = message.content[0].type === 'text' ? message.content[0].text : '';
+  } catch (err) {
+    if (isCreditsError(err)) {
+      try { text = await callOpenAI(prompt, 400); }
+      catch { text = await callGemini(prompt, 400); }
+    } else throw err;
+  }
+  return JSON.parse(extractJSON(text)) as TrendingPostResult;
+}
+
+export interface ProfileQuestion {
+  question: string;
+  category: string;
+}
+
+export async function generateProfileQuestions(params: {
+  existingAnswers: Array<{ question: string; answer: string; category: string }>;
+  businessType?: string | null;
+  industry?: string | null;
+  neededCategory: string;
+}): Promise<ProfileQuestion[]> {
+  const { existingAnswers, businessType, industry, neededCategory } = params;
+  const answeredTopics = existingAnswers.map(a => a.question).join('\n- ');
+  const prompt = `You generate qualifying questions for a business intelligence app aimed at small business owners.
+Business type: ${businessType ?? 'unknown'}. Industry: ${industry ?? 'unknown'}. Category needed: ${neededCategory}.
+Questions already answered (do NOT repeat or closely paraphrase these topics):
+- ${answeredTopics || 'none yet'}
+Generate exactly 3 new YES/NO qualifying questions for category "${neededCategory}". Each should reveal something useful about the owner's business situation.
+Return ONLY valid JSON array: [{"question":"...","category":"${neededCategory}"},...]`;
+
+  let text: string;
+  try {
+    const message = await client.messages.create({ model: 'claude-opus-4-8', max_tokens: 400, messages: [{ role: 'user', content: prompt }] });
+    text = message.content[0].type === 'text' ? message.content[0].text : '';
+  } catch (err) {
+    if (isCreditsError(err)) {
+      try { text = await callOpenAI(prompt, 400); }
+      catch { text = await callGemini(prompt, 400); }
+    } else throw err;
+  }
+  return JSON.parse(extractJSON(text)) as ProfileQuestion[];
+}
+
+export interface AIProfileResult {
+  summary: string;
+  interests: string[];
+  businessFocus: string[];
+  profileScore: number;
+}
+
+export async function updateUserProfile(params: {
+  allAnswers: Array<{ question: string; answer: string; category: string }>;
+  businessType?: string | null;
+  industry?: string | null;
+  country?: string | null;
+}): Promise<AIProfileResult> {
+  const { allAnswers, businessType, industry, country } = params;
+  const answersText = allAnswers.map(a => `[${a.category}] Q: ${a.question} → ${a.answer}`).join('\n');
+  const prompt = `You are analysing a small business owner's profile based on their answers.
+Business type: ${businessType ?? 'unknown'}. Industry: ${industry ?? 'unknown'}. Country: ${country ?? 'unknown'}.
+Their answers:
+${answersText}
+
+Write a 2-3 sentence profile summary as if speaking directly to them ("You run a...").
+Extract their top interests (3-5 short phrases) and key business focus areas (3-5 short phrases).
+Calculate a profile completeness score 0-100 based on how many answers are filled and how detailed they are (${allAnswers.length} answers given).
+Return ONLY valid JSON: {"summary":"...","interests":["..."],"businessFocus":["..."],"profileScore":number}`;
+
+  let text: string;
+  try {
+    const message = await client.messages.create({ model: 'claude-opus-4-8', max_tokens: 600, messages: [{ role: 'user', content: prompt }] });
+    text = message.content[0].type === 'text' ? message.content[0].text : '';
+  } catch (err) {
+    if (isCreditsError(err)) {
+      try { text = await callOpenAI(prompt, 600); }
+      catch { text = await callGemini(prompt, 600); }
+    } else throw err;
+  }
+  return JSON.parse(extractJSON(text)) as AIProfileResult;
 }
