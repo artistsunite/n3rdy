@@ -121,8 +121,3 @@ env:
     availability:
       - RUNTIME
 
-  - variable: RESEND_API_KEY
-    secret: RESEND_API_KEY
-    availability:
-      - RUNTIME
-
