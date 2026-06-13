@@ -71,7 +71,7 @@ export async function POST() {
   });
 
   const report = await db.advisorReport.create({
-    data: { userId, content },
+    data: { userId, content: content as unknown as Parameters<typeof db.advisorReport.create>[0]['data']['content'] },
   });
 
   return NextResponse.json({ report });
