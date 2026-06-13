@@ -221,7 +221,20 @@ export default function OverviewPanel({ userName }: { userName?: string | null }
   const topStoriesExpanded = (
     <div className="space-y-3">
       {articles.slice(0, 6).map(a => (
-        <ArticleCard key={a.id} article={a} />
+        <ArticleCard
+          key={a.id}
+          title={a.title}
+          url={a.url}
+          sourceName={a.source.name}
+          publishedAt={a.publishedAt}
+          shortSummary={a.analysis?.shortSummary}
+          sentiment={a.analysis?.sentiment}
+          sentimentScore={a.analysis?.sentimentScore}
+          marketImpactScore={a.analysis?.marketImpactScore}
+          riskLevel={a.analysis?.riskLevel}
+          bullishBearish={a.analysis?.bullishBearish}
+          sectorsAffected={a.analysis?.sectorsAffected as string[]}
+        />
       ))}
       {articles.length === 0 && (
         <p className="text-sm text-white/40 text-center py-4">No articles loaded yet. Refresh to ingest.</p>
