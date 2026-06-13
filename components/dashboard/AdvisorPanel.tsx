@@ -161,10 +161,11 @@ export default function AdvisorPanel() {
 
       // Update conversation list
       if (convId) {
+        const finalConvId = convId;
         setConversations(prev => {
-          const exists = prev.find(c => c.id === convId);
-          if (exists) return prev.map(c => c.id === convId ? { ...c, updatedAt: new Date().toISOString() } : c);
-          return [{ id: convId, title: text.slice(0, 60), updatedAt: new Date().toISOString() }, ...prev];
+          const exists = prev.find(c => c.id === finalConvId);
+          if (exists) return prev.map(c => c.id === finalConvId ? { ...c, updatedAt: new Date().toISOString() } : c);
+          return [{ id: finalConvId, title: text.slice(0, 60), updatedAt: new Date().toISOString() }, ...prev];
         });
       }
     } catch (err) {
