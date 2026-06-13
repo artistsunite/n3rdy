@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, TrendingUp, FlaskConical, Loader2, ChevronRight, Check, X, Play, Square } from 'lucide-react';
+import { Zap, TrendingUp, FlaskConical, Loader2, ChevronRight, Check, X, Play, Square, ClipboardList } from 'lucide-react';
 
 interface GrowthOpportunity {
   id: string;
@@ -30,6 +30,7 @@ interface GrowthExperiment {
   successMetrics: string[];
   estimatedDays: number;
   status: string;
+  result?: string | null;
   priorityScore: number;
   generatedAt: string;
 }
@@ -78,6 +79,8 @@ export default function GrowthPanel() {
   const [experiments, setExperiments] = useState<GrowthExperiment[]>([]);
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [resultInputs, setResultInputs] = useState<Record<string, string>>({});
+  const [savingResult, setSavingResult] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     const [oppRes, expRes] = await Promise.all([
@@ -100,6 +103,7 @@ export default function GrowthPanel() {
     const r = await fetch('/api/growth/opportunities/generate', { method: 'POST' });
     const d = await r.json() as { opportunities?: GrowthOpportunity[]; error?: string };
     if (d.opportunities) setOpportunities(prev => [...d.opportunities!, ...prev]);
+    else if (d.error) alert(d.error);
     setGenerating(false);
   }, []);
 
@@ -108,21 +112,40 @@ export default function GrowthPanel() {
     const r = await fetch('/api/growth/experiments/generate', { method: 'POST' });
     const d = await r.json() as { experiments?: GrowthExperiment[]; error?: string };
     if (d.experiments) setExperiments(prev => [...d.experiments!, ...prev]);
+    else if (d.error) alert(d.error);
     setGenerating(false);
   }, []);
 
   const updateOpportunity = useCallback(async (id: string, status: string) => {
     setOpportunities(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+    await fetch(`/api/growth/opportunities/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
   }, []);
 
   const updateExperiment = useCallback(async (id: string, status: string) => {
+    setExperiments(prev => prev.map(e => e.id === id ? { ...e, status } : e));
     await fetch(`/api/growth/experiments/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
     });
-    setExperiments(prev => prev.map(e => e.id === id ? { ...e, status } : e));
   }, []);
+
+  const saveResult = useCallback(async (id: string) => {
+    const result = resultInputs[id]?.trim();
+    if (!result) return;
+    setSavingResult(id);
+    await fetch(`/api/growth/experiments/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ result }),
+    });
+    setExperiments(prev => prev.map(e => e.id === id ? { ...e, result } : e));
+    setSavingResult(null);
+  }, [resultInputs]);
 
   const activeOpps = opportunities.filter(o => o.status !== 'dismissed');
   const highImpact = opportunities.filter(o => o.impactScore >= 0.7 && o.status !== 'dismissed').length;
@@ -186,7 +209,7 @@ export default function GrowthPanel() {
               <div className="liquid-glass-card rounded-2xl p-8 text-center">
                 <TrendingUp className="mx-auto mb-3 text-white/20" size={32} />
                 <p className="text-white/40 text-sm">No opportunities yet.</p>
-                <p className="text-white/25 text-xs mt-1">Complete your business profile then click &quot;Find Opportunities&quot;.</p>
+                <p className="text-white/25 text-xs mt-1">Complete your Business Profile then click &quot;Find Opportunities&quot;.</p>
               </div>
             ) : (
               activeOpps.map(opp => (
@@ -195,7 +218,7 @@ export default function GrowthPanel() {
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TYPE_COLORS[opp.type] ?? 'bg-white/10 text-white/60'}`}>
-                        {opp.type.replace('_', ' ')}
+                        {opp.type.replace(/_/g, ' ')}
                       </span>
                       {opp.potentialRevenue && (
                         <span className="text-xs text-green-400/70 bg-green-500/10 px-2 py-0.5 rounded-full">{opp.potentialRevenue}</span>
@@ -203,10 +226,14 @@ export default function GrowthPanel() {
                       {opp.timeHorizon && (
                         <span className="text-xs text-white/30">{opp.timeHorizon}d</span>
                       )}
+                      {opp.status === 'actioned' && (
+                        <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">actioned</span>
+                      )}
                     </div>
                     <div className="flex gap-1">
-                      <button onClick={() => updateOpportunity(opp.id, 'actioned')}
-                        className="p-1.5 rounded-lg bg-green-500/10 hover:bg-green-500/20 text-green-400 transition-all" title="Mark actioned">
+                      <button onClick={() => updateOpportunity(opp.id, opp.status === 'actioned' ? 'new' : 'actioned')}
+                        className={`p-1.5 rounded-lg transition-all ${opp.status === 'actioned' ? 'bg-green-500/20 text-green-400' : 'bg-white/5 hover:bg-green-500/10 text-white/30 hover:text-green-400'}`}
+                        title={opp.status === 'actioned' ? 'Unmark' : 'Mark actioned'}>
                         <Check size={12} />
                       </button>
                       <button onClick={() => updateOpportunity(opp.id, 'dismissed')}
@@ -254,7 +281,7 @@ export default function GrowthPanel() {
                 <motion.div key={exp.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                   className="liquid-glass-card rounded-2xl p-5">
                   <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className={`text-xs font-medium ${DIFFICULTY_COLORS[exp.difficulty]}`}>{exp.difficulty} difficulty</span>
                       {exp.estimatedDays && <span className="text-white/30 text-xs">{exp.estimatedDays} days</span>}
                       {exp.expectedRevenue && <span className="text-green-400/70 text-xs">{exp.expectedRevenue}</span>}
@@ -267,10 +294,16 @@ export default function GrowthPanel() {
                         </button>
                       )}
                       {exp.status === 'running' && (
-                        <button onClick={() => updateExperiment(exp.id, 'completed')}
-                          className="flex items-center gap-1 text-xs bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded-lg transition-all">
-                          <Square size={10} /> Complete
-                        </button>
+                        <>
+                          <button onClick={() => updateExperiment(exp.id, 'completed')}
+                            className="flex items-center gap-1 text-xs bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 px-2 py-1 rounded-lg transition-all">
+                            <Check size={10} /> Complete
+                          </button>
+                          <button onClick={() => updateExperiment(exp.id, 'abandoned')}
+                            className="flex items-center gap-1 text-xs bg-white/5 hover:bg-red-500/10 text-white/30 hover:text-red-400 px-2 py-1 rounded-lg transition-all">
+                            <Square size={10} /> Abandon
+                          </button>
+                        </>
                       )}
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
                         exp.status === 'running' ? 'bg-yellow-500/20 text-yellow-400' :
@@ -283,7 +316,7 @@ export default function GrowthPanel() {
                   <p className="text-white text-sm font-medium mb-1">{exp.hypothesis}</p>
                   <p className="text-white/50 text-xs mb-3 leading-relaxed">{exp.expectedOutcome}</p>
                   {exp.successMetrics.length > 0 && (
-                    <div className="space-y-1">
+                    <div className="space-y-1 mb-3">
                       <div className="text-white/30 text-xs">Success metrics</div>
                       {exp.successMetrics.map((m, i) => (
                         <div key={i} className="flex items-start gap-2 text-xs text-white/45">
@@ -291,6 +324,33 @@ export default function GrowthPanel() {
                           {m}
                         </div>
                       ))}
+                    </div>
+                  )}
+                  {(exp.status === 'completed' || exp.status === 'abandoned') && (
+                    <div className="mt-3 pt-3 border-t border-white/10">
+                      <div className="flex items-center gap-2 mb-2">
+                        <ClipboardList size={12} className="text-white/40" />
+                        <span className="text-white/40 text-xs">Results & learnings</span>
+                      </div>
+                      {exp.result ? (
+                        <p className="text-white/60 text-xs leading-relaxed bg-white/5 rounded-xl p-3">{exp.result}</p>
+                      ) : (
+                        <div className="flex gap-2">
+                          <textarea
+                            className="flex-1 liquid-glass rounded-xl px-3 py-2 text-white text-xs outline-none placeholder-white/20 focus:ring-1 focus:ring-cyan-500/40 resize-none h-20"
+                            placeholder="What did you learn? What was the outcome?"
+                            value={resultInputs[exp.id] ?? ''}
+                            onChange={e => setResultInputs(prev => ({ ...prev, [exp.id]: e.target.value }))}
+                          />
+                          <button
+                            onClick={() => saveResult(exp.id)}
+                            disabled={savingResult === exp.id || !resultInputs[exp.id]?.trim()}
+                            className="self-end bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 text-cyan-300 px-3 py-2 rounded-xl text-xs font-medium transition-all disabled:opacity-40"
+                          >
+                            {savingResult === exp.id ? '…' : 'Save'}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </motion.div>

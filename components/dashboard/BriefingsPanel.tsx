@@ -1,7 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { FileText, ChevronDown, ChevronUp, Zap, AlertCircle } from 'lucide-react';
+import { FileText, ChevronDown, ChevronUp, Zap, AlertCircle, TrendingUp, Crosshair, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
+
+interface GrowthSignal {
+  opportunities: Array<{ id: string; title: string; type: string; urgencyScore: number; potentialRevenue?: string | null }>;
+  competitorEvents: Array<{ id: string; title: string; importance: string; detectedAt: string }>;
+}
 
 interface BriefingContent {
   executiveSummary: string;
@@ -30,6 +36,7 @@ export default function BriefingsPanel() {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [growthSignals, setGrowthSignals] = useState<GrowthSignal | null>(null);
 
   const loadBriefings = async () => {
     const res = await fetch('/api/briefings?limit=10');
@@ -38,7 +45,41 @@ export default function BriefingsPanel() {
     setLoading(false);
   };
 
-  useEffect(() => { loadBriefings(); }, []);
+  const loadGrowthSignals = async () => {
+    const [oppRes, evtRes] = await Promise.all([
+      fetch('/api/growth/opportunities?status=new'),
+      fetch('/api/competitors'),
+    ]);
+    if (!oppRes.ok || !evtRes.ok) return;
+    const [oppData, evtData] = await Promise.all([
+      oppRes.json() as Promise<{ opportunities: GrowthSignal['opportunities'] }>,
+      evtRes.json() as Promise<{ competitors: Array<{ id: string }> }>,
+    ]);
+
+    // Collect latest events from all competitors
+    const competitorEvents: GrowthSignal['competitorEvents'] = [];
+    for (const c of (evtData.competitors ?? []).slice(0, 3)) {
+      const r = await fetch(`/api/competitors/${c.id}/events`);
+      if (r.ok) {
+        const d = await r.json() as { events: GrowthSignal['competitorEvents'] };
+        competitorEvents.push(...(d.events ?? []).slice(0, 2));
+      }
+    }
+
+    setGrowthSignals({
+      opportunities: (oppData.opportunities ?? [])
+        .sort((a, b) => b.urgencyScore - a.urgencyScore)
+        .slice(0, 3),
+      competitorEvents: competitorEvents
+        .sort((a, b) => new Date(b.detectedAt).getTime() - new Date(a.detectedAt).getTime())
+        .slice(0, 3),
+    });
+  };
+
+  useEffect(() => {
+    loadBriefings();
+    loadGrowthSignals();
+  }, []);
 
   const triggerBriefing = async () => {
     setGenerating(true);
@@ -84,6 +125,54 @@ export default function BriefingsPanel() {
           {generating ? 'Generating…' : 'Generate Now'}
         </button>
       </div>
+
+      {growthSignals && (growthSignals.opportunities.length > 0 || growthSignals.competitorEvents.length > 0) && (
+        <div className="liquid-glass-card rounded-2xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-white/50 text-xs font-medium uppercase tracking-wider">Growth Signals</span>
+            <Link href="/dashboard/growth" className="flex items-center gap-1 text-cyan-400/60 hover:text-cyan-400 text-xs transition-all">
+              View all <ArrowRight size={10} />
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {growthSignals.opportunities.length > 0 && (
+              <div>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <TrendingUp size={12} className="text-green-400" />
+                  <span className="text-white/40 text-xs">Top Opportunities</span>
+                </div>
+                <div className="space-y-1.5">
+                  {growthSignals.opportunities.map(o => (
+                    <div key={o.id} className="flex items-start gap-2">
+                      <div className="w-1 h-1 rounded-full bg-green-400 mt-1.5 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <div className="text-white/70 text-xs truncate">{o.title}</div>
+                        {o.potentialRevenue && <div className="text-green-400/60 text-xs">{o.potentialRevenue}</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {growthSignals.competitorEvents.length > 0 && (
+              <div>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Crosshair size={12} className="text-red-400" />
+                  <span className="text-white/40 text-xs">Competitor Activity</span>
+                </div>
+                <div className="space-y-1.5">
+                  {growthSignals.competitorEvents.map(e => (
+                    <div key={e.id} className="flex items-start gap-2">
+                      <div className={`w-1 h-1 rounded-full mt-1.5 flex-shrink-0 ${e.importance === 'high' ? 'bg-red-400' : e.importance === 'medium' ? 'bg-yellow-400' : 'bg-white/30'}`} />
+                      <div className="text-white/60 text-xs line-clamp-2">{e.title}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="flex items-start gap-3 bg-n3-danger/10 border border-n3-danger/20 rounded-xl px-4 py-3">
