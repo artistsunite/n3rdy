@@ -391,11 +391,11 @@ export default function OverviewControlDrawer({ open, onClose, onFiltersChange }
                           onChange={v => setAlert('sentimentAlert', v)}
                         />
                       </div>
-                      {alertThresholds.sentimentAlert && (
+                      {!!alertThresholds.sentimentAlert && (
                         <>
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-white/40 text-xs">Threshold</span>
-                            <span className="text-[#FF4D6D] text-xs font-medium">{alertThresholds.sentimentThreshold ?? -0.3}</span>
+                            <span className="text-[#FF4D6D] text-xs font-medium">{((alertThresholds.sentimentThreshold as number) ?? -0.3)}</span>
                           </div>
                           <input
                             type="range" min={-1} max={0} step={0.05}
