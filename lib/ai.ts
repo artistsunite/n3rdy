@@ -655,3 +655,280 @@ Return ONLY valid JSON: {"summary":"...","interests":["..."],"businessFocus":[".
   }
   return JSON.parse(extractJSON(text)) as AIProfileResult;
 }
+
+// ─── Growth Intelligence Functions ────────────────────────────────────────────
+
+export interface CompetitorScanResult {
+  summary: string;
+  importance: 'low' | 'medium' | 'high';
+  eventType: string;
+}
+
+export async function scanCompetitorPage(params: {
+  competitorName: string;
+  pageType: string;
+  url: string;
+  previousText: string;
+  currentText: string;
+}): Promise<CompetitorScanResult> {
+  const { competitorName, pageType, url, previousText, currentText } = params;
+  const prompt = `You detect meaningful changes on a competitor's ${pageType} page.
+Competitor: ${competitorName}
+URL: ${url}
+PREVIOUS CONTENT (excerpt):
+${previousText.slice(0, 2000)}
+CURRENT CONTENT (excerpt):
+${currentText.slice(0, 2000)}
+
+Describe the most important change in 1-2 sentences. Classify importance (low/medium/high) and event type (one of: pricing_change, content_change, new_post, product_change, hiring, funding).
+Return ONLY valid JSON: {"summary":"...","importance":"medium","eventType":"content_change"}`;
+
+  let text: string;
+  try {
+    const message = await client.messages.create({ model: 'claude-opus-4-8', max_tokens: 400, messages: [{ role: 'user', content: prompt }] });
+    text = message.content[0].type === 'text' ? message.content[0].text : '';
+  } catch (err) {
+    if (isCreditsError(err)) {
+      try { text = await callOpenAI(prompt, 400); }
+      catch { text = await callGemini(prompt, 400); }
+    } else throw err;
+  }
+  return JSON.parse(extractJSON(text)) as CompetitorScanResult;
+}
+
+export interface GrowthOpportunityResult {
+  type: string;
+  title: string;
+  description: string;
+  reason: string;
+  confidenceScore: number;
+  impactScore: number;
+  urgencyScore: number;
+  difficultyScore: number;
+  potentialRevenue?: string;
+  timeHorizon?: number;
+  suggestedActions: string[];
+  dataSources: string[];
+}
+
+export async function generateOpportunities(params: {
+  businessProfile: {
+    businessName?: string | null;
+    businessType?: string | null;
+    industry?: string | null;
+    description?: string | null;
+    products: unknown;
+    services: unknown;
+    targetAudience?: string | null;
+    revenueGoal?: string | null;
+    growthGoal?: string | null;
+    keywords: unknown;
+  };
+  recentArticles: Array<{ title: string; summary?: string | null }>;
+  competitorEvents: Array<{ title: string; eventType: string; aiSummary: string }>;
+  trendingTopics: Array<{ name: string; category: string }>;
+  userInsights: Array<{ question: string; answer?: string | null }>;
+}): Promise<GrowthOpportunityResult[]> {
+  const { businessProfile, recentArticles, competitorEvents, trendingTopics, userInsights } = params;
+
+  const articlesText = recentArticles.slice(0, 15).map(a => `- ${a.title}: ${a.summary ?? ''}`).join('\n');
+  const eventsText = competitorEvents.slice(0, 8).map(e => `- [${e.eventType}] ${e.title}: ${e.aiSummary}`).join('\n');
+  const topicsText = trendingTopics.slice(0, 8).map(t => `- ${t.name} (${t.category})`).join('\n');
+  const insightsText = userInsights.slice(0, 10).filter(i => i.answer).map(i => `- Q: ${i.question} → ${i.answer}`).join('\n');
+
+  const prompt = `You are a growth strategist. Analyze the following context for a business and identify 3-7 specific, actionable growth opportunities.
+
+BUSINESS:
+Name: ${businessProfile.businessName ?? 'Unknown'}
+Type: ${businessProfile.businessType ?? 'Unknown'}
+Industry: ${businessProfile.industry ?? 'Unknown'}
+Description: ${businessProfile.description ?? 'N/A'}
+Products: ${JSON.stringify(businessProfile.products)}
+Services: ${JSON.stringify(businessProfile.services)}
+Target Audience: ${businessProfile.targetAudience ?? 'N/A'}
+Revenue Goal: ${businessProfile.revenueGoal ?? 'N/A'}
+Growth Goal: ${businessProfile.growthGoal ?? 'N/A'}
+Keywords: ${JSON.stringify(businessProfile.keywords)}
+
+RECENT NEWS (last 24h):
+${articlesText || 'None'}
+
+COMPETITOR CHANGES:
+${eventsText || 'None'}
+
+TRENDING TOPICS:
+${topicsText || 'None'}
+
+OWNER INSIGHTS:
+${insightsText || 'None'}
+
+For each opportunity, provide:
+- type: one of revenue|marketing|pricing|market_gap|competitor_weakness|trend|partnership|geographic
+- title: concise opportunity name (max 10 words)
+- description: what the opportunity is (2-3 sentences)
+- reason: why it exists right now (1-2 sentences, reference specific context above)
+- confidenceScore: 0.0-1.0
+- impactScore: 0.0-1.0
+- urgencyScore: 0.0-1.0 (1.0 = act now, 0.0 = no rush)
+- difficultyScore: 0.0-1.0 (1.0 = very hard)
+- potentialRevenue: estimated $ impact (optional string like "$5k-$20k/mo")
+- timeHorizon: days to see results (number, optional)
+- suggestedActions: array of 2-4 specific action strings
+- dataSources: array of context items that support this (reference news/trends/competitors)
+
+Return ONLY valid JSON array of opportunity objects.`;
+
+  let text: string;
+  try {
+    const message = await client.messages.create({ model: 'claude-opus-4-8', max_tokens: 2500, messages: [{ role: 'user', content: prompt }] });
+    text = message.content[0].type === 'text' ? message.content[0].text : '';
+  } catch (err) {
+    if (isCreditsError(err)) {
+      try { text = await callOpenAI(prompt, 2500); }
+      catch { text = await callGemini(prompt, 2500); }
+    } else throw err;
+  }
+  return JSON.parse(extractJSON(text)) as GrowthOpportunityResult[];
+}
+
+export interface GrowthExperimentResult {
+  hypothesis: string;
+  expectedOutcome: string;
+  difficulty: 'low' | 'medium' | 'high';
+  expectedRevenue?: string;
+  successMetrics: string[];
+  estimatedDays: number;
+  requiredActions: string[];
+  priorityScore: number;
+}
+
+export async function generateExperiments(params: {
+  businessProfile: {
+    businessName?: string | null;
+    businessType?: string | null;
+    industry?: string | null;
+    growthGoal?: string | null;
+  };
+  topOpportunities: GrowthOpportunityResult[];
+  userInsights: Array<{ question: string; answer?: string | null }>;
+}): Promise<GrowthExperimentResult[]> {
+  const { businessProfile, topOpportunities, userInsights } = params;
+
+  const oppsText = topOpportunities.slice(0, 5).map((o, i) => `${i + 1}. [${o.type}] ${o.title}: ${o.description}`).join('\n');
+  const insightsText = userInsights.slice(0, 10).filter(i => i.answer).map(i => `- ${i.question}: ${i.answer}`).join('\n');
+
+  const prompt = `You are a growth experimentation expert. Design 3-5 specific, time-boxed growth experiments for this business based on their top opportunities.
+
+BUSINESS:
+Name: ${businessProfile.businessName ?? 'Unknown'}
+Type: ${businessProfile.businessType ?? 'Unknown'}
+Industry: ${businessProfile.industry ?? 'Unknown'}
+Growth Goal: ${businessProfile.growthGoal ?? 'N/A'}
+
+TOP OPPORTUNITIES:
+${oppsText}
+
+OWNER CONTEXT:
+${insightsText || 'None'}
+
+For each experiment:
+- hypothesis: "If we [action], then [outcome] because [reason]" (1 sentence)
+- expectedOutcome: measurable result to expect (1 sentence)
+- difficulty: low|medium|high
+- expectedRevenue: estimated $ impact (optional)
+- successMetrics: array of 2-3 specific KPIs to track
+- estimatedDays: realistic days to run the experiment (14-90)
+- requiredActions: array of 3-5 concrete steps to implement
+- priorityScore: 0.0-1.0 based on impact × confidence ÷ difficulty
+
+Return ONLY valid JSON array of experiment objects.`;
+
+  let text: string;
+  try {
+    const message = await client.messages.create({ model: 'claude-opus-4-8', max_tokens: 2000, messages: [{ role: 'user', content: prompt }] });
+    text = message.content[0].type === 'text' ? message.content[0].text : '';
+  } catch (err) {
+    if (isCreditsError(err)) {
+      try { text = await callOpenAI(prompt, 2000); }
+      catch { text = await callGemini(prompt, 2000); }
+    } else throw err;
+  }
+  return JSON.parse(extractJSON(text)) as GrowthExperimentResult[];
+}
+
+export interface AdvisorReportContent {
+  whatChanged: string;
+  whyItMatters: string;
+  topOpportunities: Array<{ title: string; impact: string; action: string }>;
+  topThreats: Array<{ title: string; risk: string; mitigation: string }>;
+  recommendedActions: string[];
+  outlook7d: string;
+  outlook30d: string;
+}
+
+export async function generateAdvisorReport(params: {
+  businessProfile: {
+    businessName?: string | null;
+    businessType?: string | null;
+    industry?: string | null;
+    description?: string | null;
+    growthGoal?: string | null;
+    revenueGoal?: string | null;
+  };
+  recentBriefingSummary: string;
+  opportunities: Array<{ title: string; type: string; description: string; impactScore: number; urgencyScore: number }>;
+  competitorEvents: Array<{ title: string; eventType: string; aiSummary: string; importance: string }>;
+  trendingTopics: Array<{ name: string; category: string }>;
+}): Promise<AdvisorReportContent> {
+  const { businessProfile, recentBriefingSummary, opportunities, competitorEvents, trendingTopics } = params;
+
+  const oppsText = opportunities.slice(0, 5).map(o => `- [${o.type}] ${o.title} (impact: ${o.impactScore.toFixed(1)}, urgency: ${o.urgencyScore.toFixed(1)}): ${o.description}`).join('\n');
+  const eventsText = competitorEvents.slice(0, 5).map(e => `- [${e.importance}] ${e.title}: ${e.aiSummary}`).join('\n');
+  const topicsText = trendingTopics.slice(0, 8).map(t => t.name).join(', ');
+
+  const prompt = `You are an elite business growth advisor. Write a strategic weekly intelligence report for this business owner.
+
+BUSINESS:
+Name: ${businessProfile.businessName ?? 'Unknown'}
+Type: ${businessProfile.businessType ?? 'Unknown'}
+Industry: ${businessProfile.industry ?? 'Unknown'}
+Description: ${businessProfile.description ?? 'N/A'}
+Revenue Goal: ${businessProfile.revenueGoal ?? 'N/A'}
+Growth Goal: ${businessProfile.growthGoal ?? 'N/A'}
+
+RECENT NEWS SUMMARY:
+${recentBriefingSummary || 'No recent briefing available.'}
+
+TOP GROWTH OPPORTUNITIES DETECTED:
+${oppsText || 'None identified yet.'}
+
+COMPETITOR INTELLIGENCE:
+${eventsText || 'No recent competitor changes.'}
+
+TRENDING TOPICS:
+${topicsText || 'None'}
+
+Write a strategic advisor report with these sections:
+- whatChanged: 2-3 sentences on the most important market developments this week relevant to this business
+- whyItMatters: 2-3 sentences explaining the strategic significance for this specific business
+- topOpportunities: array of 3 objects {title, impact, action} — the top opportunities to act on NOW
+- topThreats: array of 2-3 objects {title, risk, mitigation} — biggest risks to watch
+- recommendedActions: numbered array of 5-7 specific, actionable recommendations for this week
+- outlook7d: 2-3 sentence short-term outlook for the next 7 days
+- outlook30d: 2-3 sentence medium-term strategic outlook for the next 30 days
+
+Speak directly to the business owner in a confident, strategic tone. Be specific and reference actual news/trends/competitor data from above.
+Return ONLY valid JSON matching this structure.`;
+
+  let text: string;
+  try {
+    const message = await client.messages.create({ model: 'claude-opus-4-8', max_tokens: 3000, messages: [{ role: 'user', content: prompt }] });
+    text = message.content[0].type === 'text' ? message.content[0].text : '';
+  } catch (err) {
+    if (isCreditsError(err)) {
+      try { text = await callOpenAI(prompt, 3000); }
+      catch { text = await callGemini(prompt, 3000); }
+    } else throw err;
+  }
+  return JSON.parse(extractJSON(text)) as AdvisorReportContent;
+}

@@ -21,6 +21,9 @@ import {
   Zap,
   Target,
   Megaphone,
+  Crosshair,
+  Brain,
+  Building2,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -34,6 +37,9 @@ const NAV_ITEMS = [
   { href: '/dashboard/sources', icon: Rss, label: 'Sources' },
   { href: '/dashboard/watchlist', icon: Star, label: 'Watchlist' },
   { href: '/dashboard/calendar', icon: Calendar, label: 'Calendar' },
+  { href: '/dashboard/competitors', icon: Crosshair, label: 'Competitors' },
+  { href: '/dashboard/growth', icon: Zap, label: 'Growth' },
+  { href: '/dashboard/advisor', icon: Brain, label: 'Advisor' },
 ];
 
 interface Props {
@@ -102,6 +108,13 @@ export default function DashboardShell({ children, userName, userImage }: Props)
 
         {/* User */}
         <div className="px-3 py-4 border-t border-white/10 space-y-0.5">
+          <Link
+            href="/dashboard/profile"
+            className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-white/50 hover:text-white hover:bg-white/5 transition-colors"
+          >
+            <Building2 size={16} />
+            Business Profile
+          </Link>
           <Link
             href="/dashboard/settings"
             className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-white/50 hover:text-white hover:bg-white/5 transition-colors"

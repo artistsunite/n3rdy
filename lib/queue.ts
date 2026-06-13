@@ -3,6 +3,7 @@ import { Queue, Worker, Job } from 'bullmq';
 export type IngestJobData = { sourceId: string };
 export type AnalyzeJobData = { articleId: string };
 export type BriefingJobData = { userId: string; type?: string };
+export type CompetitorScanJobData = { competitorId: string; userId: string };
 
 function getConnection() {
   const url = process.env.REDIS_URL;
@@ -30,6 +31,7 @@ function makeQueue(name: string, attempts = 3): Queue<any, any, string> {
 let _ingestQueue: ReturnType<typeof makeQueue> | null = null;
 let _analyzeQueue: ReturnType<typeof makeQueue> | null = null;
 let _briefingQueue: ReturnType<typeof makeQueue> | null = null;
+let _competitorScanQueue: ReturnType<typeof makeQueue> | null = null;
 
 export function getIngestQueue() {
   if (!_ingestQueue) _ingestQueue = makeQueue('ingest', 3);
@@ -44,6 +46,11 @@ export function getAnalyzeQueue() {
 export function getBriefingQueue() {
   if (!_briefingQueue) _briefingQueue = makeQueue('briefing', 2);
   return _briefingQueue;
+}
+
+export function getCompetitorScanQueue() {
+  if (!_competitorScanQueue) _competitorScanQueue = makeQueue('competitor-scan', 2);
+  return _competitorScanQueue;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
