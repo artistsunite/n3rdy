@@ -18,6 +18,11 @@ interface BriefingContent {
   watchNext: string[];
 }
 
+interface GrowthData {
+  opportunities?: Array<{ title: string; type: string; potentialRevenue?: string | null; urgencyScore: number }>;
+  competitorEvents?: Array<{ title: string; eventType: string; importance: string }>;
+}
+
 const sentimentColor = (s: string) =>
   s === 'positive' || s === 'bullish' ? '#00FF88' : s === 'negative' || s === 'bearish' ? '#FF4D6D' : '#00E5FF';
 
@@ -25,11 +30,12 @@ export async function sendBriefingEmail(params: {
   toEmail: string;
   toName: string;
   briefing: BriefingContent;
+  growth?: GrowthData;
 }): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) throw new Error('RESEND_API_KEY is not configured');
 
-  const { toEmail, toName, briefing } = params;
+  const { toEmail, toName, briefing, growth } = params;
   const firstName = toName?.split(' ')[0] ?? 'there';
   const date = new Date().toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -51,6 +57,25 @@ export async function sendBriefingEmail(params: {
 
   const bullishHtml = briefing.bullishDevelopments.slice(0, 3).map(b =>
     `<li style="color:#00FF88;margin-bottom:4px;">↑ ${b}</li>`).join('');
+
+  const hasGrowth = (growth?.opportunities?.length ?? 0) > 0 || (growth?.competitorEvents?.length ?? 0) > 0;
+  const growthSectionHtml = hasGrowth ? `
+        <!-- Growth Signals -->
+        <tr><td style="background:#0a0a1a;border-left:1px solid #00E5FF22;border-right:1px solid #00E5FF22;padding:0 32px 24px;">
+          <div style="background:#0d1b2a;border:1px solid #00E5FF15;border-radius:8px;padding:16px 20px;">
+            <div style="color:#00E5FF;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">⚡ GROWTH SIGNALS</div>
+            ${(growth?.opportunities ?? []).slice(0, 3).map(o => `
+              <div style="margin-bottom:8px;padding:8px 12px;background:#00E5FF08;border-left:2px solid #00E5FF40;border-radius:0 4px 4px 0;">
+                <span style="color:#00FF88;font-size:10px;text-transform:uppercase;font-weight:700;">${o.type.replace(/_/g, ' ')}</span>${o.potentialRevenue ? ` <span style="color:#00FF8870;font-size:10px;">· ${o.potentialRevenue}</span>` : ''}
+                <div style="color:#cccccc;font-size:13px;margin-top:2px;">${o.title}</div>
+              </div>`).join('')}
+            ${(growth?.competitorEvents ?? []).slice(0, 2).map(e => `
+              <div style="margin-bottom:8px;padding:8px 12px;background:#FF4D6D08;border-left:2px solid #FF4D6D40;border-radius:0 4px 4px 0;">
+                <span style="color:#FF4D6D;font-size:10px;text-transform:uppercase;font-weight:700;">${e.importance} · ${e.eventType.replace(/_/g, ' ')}</span>
+                <div style="color:#cccccc;font-size:13px;margin-top:2px;">${e.title}</div>
+              </div>`).join('')}
+          </div>
+        </td></tr>` : '';
 
   const html = `<!DOCTYPE html>
 <html>
@@ -78,6 +103,8 @@ export async function sendBriefingEmail(params: {
           <div style="color:#00E5FF;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">TOP STORIES</div>
           <table width="100%" cellpadding="0" cellspacing="0">${topStoriesHtml}</table>
         </td></tr>
+
+        ${growthSectionHtml}
 
         <!-- Risk & Opportunities -->
         <tr><td style="background:#0a0a1a;border-left:1px solid #00E5FF22;border-right:1px solid #00E5FF22;padding:0 32px 24px;">

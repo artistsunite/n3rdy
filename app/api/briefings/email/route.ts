@@ -13,21 +13,27 @@ export async function POST() {
 
   if (!toEmail) return NextResponse.json({ error: 'No email on account' }, { status: 400 });
 
-  // Use today's most recent briefing or the latest one available
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  let briefing = await db.briefing.findFirst({
-    where: { userId, createdAt: { gte: today } },
-    orderBy: { createdAt: 'desc' },
-  });
-
-  if (!briefing) {
-    briefing = await db.briefing.findFirst({
-      where: { userId },
+  const [briefing, opportunities, competitorEvents] = await Promise.all([
+    db.briefing.findFirst({
+      where: { userId, createdAt: { gte: today } },
       orderBy: { createdAt: 'desc' },
-    });
-  }
+    }).then(b => b ?? db.briefing.findFirst({ where: { userId }, orderBy: { createdAt: 'desc' } })),
+    db.growthOpportunity.findMany({
+      where: { userId, status: { in: ['new', 'viewed'] } },
+      orderBy: { urgencyScore: 'desc' },
+      take: 3,
+      select: { title: true, type: true, urgencyScore: true, potentialRevenue: true },
+    }).catch(() => []),
+    db.competitorEvent.findMany({
+      where: { userId, detectedAt: { gte: new Date(Date.now() - 48 * 3600 * 1000) } },
+      orderBy: [{ importance: 'desc' }, { detectedAt: 'desc' }],
+      take: 3,
+      select: { title: true, eventType: true, importance: true },
+    }).catch(() => []),
+  ]);
 
   if (!briefing) {
     return NextResponse.json(
@@ -41,6 +47,7 @@ export async function POST() {
       toEmail,
       toName,
       briefing: briefing.content as unknown as Parameters<typeof sendBriefingEmail>[0]['briefing'],
+      growth: { opportunities, competitorEvents },
     });
     return NextResponse.json({ ok: true, sentTo: toEmail });
   } catch (err) {
