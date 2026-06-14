@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
   const sentiment = searchParams.get('sentiment');
   const minImpact = parseFloat(searchParams.get('minImpact') ?? '0');
   const analysedOnly = searchParams.get('analysedOnly') === 'true';
+  const search = searchParams.get('search')?.trim();
 
   const userSources = await db.userSource.findMany({
     where: { userId: uid, isActive: true },
@@ -43,6 +44,13 @@ export async function GET(req: NextRequest) {
 
   if (minImpact > 0) {
     where.analysis = { ...(where.analysis ?? {}), marketImpactScore: { gte: minImpact } };
+  }
+
+  if (search && search.length >= 2) {
+    where.OR = [
+      { title: { contains: search, mode: 'insensitive' } },
+      { analysis: { shortSummary: { contains: search, mode: 'insensitive' } } },
+    ];
   }
 
   const [articles, total] = await Promise.all([
