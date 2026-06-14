@@ -40,10 +40,15 @@ export default function NotificationPanel({ badges }: Props) {
 
     if (evtCompRes.status === 'fulfilled') {
       const competitors: Array<{ id: string; name: string }> = evtCompRes.value.competitors ?? [];
-      for (const c of competitors.slice(0, 4)) {
-        const r = await fetch(`/api/competitors/${c.id}/events`).then(x => x.json()).catch(() => ({ events: [] })) as { events: Array<{ id: string; title: string; eventType: string; detectedAt: string; importance: string; isRead: boolean }> };
-        const unread = (r.events ?? []).filter(e => !e.isRead).slice(0, 2);
-        for (const e of unread) {
+      type EventItem = { id: string; title: string; eventType: string; detectedAt: string; importance: string; isRead: boolean };
+      const eventResults = await Promise.all(
+        competitors.slice(0, 4).map(c =>
+          fetch(`/api/competitors/${c.id}/events`).then(x => x.json()).catch(() => ({ events: [] }))
+            .then((r: { events: EventItem[] }) => ({ competitor: c, events: r.events ?? [] }))
+        )
+      );
+      for (const { competitor: c, events } of eventResults) {
+        for (const e of events.filter(e => !e.isRead).slice(0, 2)) {
           notifs.push({
             id: e.id,
             type: 'competitor_event',

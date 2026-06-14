@@ -58,15 +58,13 @@ export default function BriefingsPanel() {
       evtRes.json() as Promise<{ competitors: Array<{ id: string }> }>,
     ]);
 
-    // Collect latest events from all competitors
-    const competitorEvents: GrowthSignal['competitorEvents'] = [];
-    for (const c of (evtData.competitors ?? []).slice(0, 3)) {
-      const r = await fetch(`/api/competitors/${c.id}/events`);
-      if (r.ok) {
-        const d = await r.json() as { events: GrowthSignal['competitorEvents'] };
-        competitorEvents.push(...(d.events ?? []).slice(0, 2));
-      }
-    }
+    // Collect latest events from all competitors in parallel
+    const topCompetitors = (evtData.competitors ?? []).slice(0, 3);
+    const eventResponses = await Promise.all(
+      topCompetitors.map(c => fetch(`/api/competitors/${c.id}/events`).then(r => r.ok ? r.json() as Promise<{ events: GrowthSignal['competitorEvents'] }> : null))
+    );
+    const competitorEvents: GrowthSignal['competitorEvents'] = eventResponses
+      .flatMap(d => (d?.events ?? []).slice(0, 2));
 
     setGrowthSignals({
       opportunities: (oppData.opportunities ?? [])
