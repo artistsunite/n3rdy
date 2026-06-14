@@ -26,6 +26,7 @@ interface Article {
 
 const SENTIMENTS = ['all', 'positive', 'negative', 'neutral'];
 const RISK_OPTIONS = ['all', 'low', 'medium', 'high', 'critical'];
+type Period = '24h' | '7d' | '30d';
 const IMPACT_OPTIONS = [
   { label: 'Any impact', value: 0 },
   { label: 'Impact 3+', value: 0.3 },
@@ -43,6 +44,7 @@ export default function NewsFeed() {
   const [minImpact, setMinImpact] = useState(0);
   const [category, setCategory] = useState('all');
   const [riskLevel, setRiskLevel] = useState('all');
+  const [period, setPeriod] = useState<Period>('24h');
   const [search, setSearch] = useState(() => searchParams.get('search') ?? '');
   const [debouncedSearch, setDebouncedSearch] = useState(() => searchParams.get('search') ?? '');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -55,7 +57,7 @@ export default function NewsFeed() {
 
   const load = useCallback(async (reset = false) => {
     setLoading(true);
-    const params = new URLSearchParams({ limit: '20', offset: String(reset ? 0 : offset) });
+    const params = new URLSearchParams({ limit: '20', offset: String(reset ? 0 : offset), period });
     if (sentiment !== 'all') params.set('sentiment', sentiment);
     if (minImpact > 0) params.set('minImpact', String(minImpact));
     if (category !== 'all') params.set('category', category);
@@ -72,22 +74,32 @@ export default function NewsFeed() {
     }
     setTotal(data.total ?? 0);
     setLoading(false);
-  }, [offset, sentiment, minImpact, category, riskLevel, debouncedSearch]);
+  }, [offset, sentiment, minImpact, category, riskLevel, period, debouncedSearch]);
 
   useEffect(() => {
     load(true);
-  }, [sentiment, minImpact, category, riskLevel, debouncedSearch]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sentiment, minImpact, category, riskLevel, period, debouncedSearch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Derive categories from loaded articles
   const categories = ['all', ...Array.from(new Set(articles.map(a => a.source.category).filter(Boolean)))].sort((a, b) => a === 'all' ? -1 : b === 'all' ? 1 : a.localeCompare(b));
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold text-white">News Feed</h1>
-        <p className="text-white/50 text-sm mt-1">
-          {debouncedSearch.length >= 2 ? `${total} results for "${debouncedSearch}"` : `${total} articles from your sources`}
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-white">News Feed</h1>
+          <p className="text-white/50 text-sm mt-1">
+            {debouncedSearch.length >= 2 ? `${total} results for "${debouncedSearch}"` : `${total} articles from your sources`}
+          </p>
+        </div>
+        <div className="flex gap-1 p-1 liquid-glass-card rounded-lg flex-shrink-0">
+          {(['24h', '7d', '30d'] as Period[]).map(p => (
+            <button key={p} onClick={() => setPeriod(p)}
+              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${period === p ? 'bg-n3-primary/10 text-n3-primary' : 'text-white/50 hover:text-white'}`}>
+              {p}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Search */}
