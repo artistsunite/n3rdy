@@ -68,7 +68,7 @@ export default function WatchlistActivityWidget() {
         </div>
       )}
       <p className="text-xs text-white/40">
-        {items.length} items monitored · {active.length} active today
+        {items.length} items monitored · {active.length} with mentions
       </p>
     </div>
   );

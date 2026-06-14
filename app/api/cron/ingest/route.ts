@@ -137,33 +137,43 @@ export async function GET(req: Request) {
       take: 200,
     });
 
-    for (const competitor of allCompetitors) {
-      const nameLower = competitor.name.toLowerCase();
-      for (const article of recentArticles) {
-        const titleLower = article.title.toLowerCase();
-        const summaryLower = (article.analysis?.shortSummary ?? '').toLowerCase();
-        if (!titleLower.includes(nameLower) && !summaryLower.includes(nameLower)) continue;
+    if (allCompetitors.length > 0 && recentArticles.length > 0) {
+      // Batch-fetch all existing news_mention events for these competitors to avoid N×M queries
+      const articleUrls = recentArticles.map(a => a.url);
+      const existingEvents = await db.competitorEvent.findMany({
+        where: {
+          competitorId: { in: allCompetitors.map(c => c.id) },
+          eventType: 'news_mention',
+          sourceUrl: { in: articleUrls },
+        },
+        select: { competitorId: true, sourceUrl: true },
+      });
+      const existingSet = new Set(existingEvents.map(e => `${e.competitorId}:${e.sourceUrl}`));
 
-        // Skip if we already have a news_mention event for this article URL
-        const existing = await db.competitorEvent.findFirst({
-          where: { competitorId: competitor.id, sourceUrl: article.url, eventType: 'news_mention' },
-        });
-        if (existing) continue;
+      for (const competitor of allCompetitors) {
+        const nameLower = competitor.name.toLowerCase();
+        for (const article of recentArticles) {
+          const titleLower = article.title.toLowerCase();
+          const summaryLower = (article.analysis?.shortSummary ?? '').toLowerCase();
+          if (!titleLower.includes(nameLower) && !summaryLower.includes(nameLower)) continue;
+          if (existingSet.has(`${competitor.id}:${article.url}`)) continue;
 
-        const impact = article.analysis?.marketImpactScore ?? 0;
-        await db.competitorEvent.create({
-          data: {
-            competitorId: competitor.id,
-            userId: competitor.userId,
-            eventType: 'news_mention',
-            title: `News mention: ${article.title.slice(0, 100)}`,
-            description: article.analysis?.shortSummary ?? article.title,
-            sourceUrl: article.url,
-            aiSummary: article.analysis?.shortSummary ?? 'Article mentions this competitor.',
-            importance: impact > 0.7 ? 'high' : impact > 0.4 ? 'medium' : 'low',
-          },
-        });
-        newsMentionsCreated++;
+          const impact = article.analysis?.marketImpactScore ?? 0;
+          await db.competitorEvent.create({
+            data: {
+              competitorId: competitor.id,
+              userId: competitor.userId,
+              eventType: 'news_mention',
+              title: `News mention: ${article.title.slice(0, 100)}`,
+              description: article.analysis?.shortSummary ?? article.title,
+              sourceUrl: article.url,
+              aiSummary: article.analysis?.shortSummary ?? 'Article mentions this competitor.',
+              importance: impact > 0.7 ? 'high' : impact > 0.4 ? 'medium' : 'low',
+            },
+          });
+          existingSet.add(`${competitor.id}:${article.url}`);
+          newsMentionsCreated++;
+        }
       }
     }
   } catch { /* non-fatal */ }
