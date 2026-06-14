@@ -214,7 +214,7 @@ export default function DashboardShell({ children, userName, userImage }: Props)
             <span className="font-bold text-white">N3RDY INTEL</span>
           </div>
           <div className="ml-auto">
-            <NotificationPanel badges={badges} />
+            <NotificationPanel badges={badges} onBadgesRefresh={fetchBadges} />
           </div>
         </header>
 
