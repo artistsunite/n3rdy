@@ -349,13 +349,23 @@ export default function AdvisorPanel() {
                       Get strategic advice on growth opportunities, competitor moves, pricing, marketing, or anything business-related.
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2 justify-center">
-                      {[
-                        'How should I respond to my competitor lowering prices?',
+                      {(report?.content ? [
+                        report.content.topOpportunities?.[0]
+                          ? `Tell me more about the "${report.content.topOpportunities[0].title}" opportunity`
+                          : 'What\'s my best growth opportunity right now?',
+                        report.content.topThreats?.[0]
+                          ? `How should I respond to: ${report.content.topThreats[0].title}?`
+                          : 'What competitive threats should I watch?',
+                        report.content.recommendedActions?.[0]
+                          ? `Help me execute: ${report.content.recommendedActions[0].slice(0, 60)}…`
+                          : 'Help me prioritize this week\'s actions',
+                      ] : [
                         'What\'s my best growth opportunity right now?',
+                        'How should I respond to competitor moves?',
                         'Help me prioritize my growth experiments',
-                      ].map(q => (
+                      ]).map(q => (
                         <button key={q} onClick={() => { setInput(q); inputRef.current?.focus(); }}
-                          className="text-xs bg-white/5 hover:bg-white/10 text-white/40 hover:text-white/60 px-3 py-1.5 rounded-full transition-all text-left">
+                          className="text-xs bg-white/5 hover:bg-white/10 text-white/40 hover:text-white/60 px-3 py-1.5 rounded-xl transition-all text-left max-w-xs">
                           {q}
                         </button>
                       ))}
