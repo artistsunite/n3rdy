@@ -191,15 +191,23 @@ export default function WatchlistPanel() {
 
       {/* Add form */}
       <div className="liquid-glass-card rounded-2xl p-5">
-        <h2 className="text-sm font-semibold text-white mb-4">Add to Watchlist</h2>
+        <h2 className="text-sm font-semibold text-white mb-3">Add to Watchlist</h2>
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {TYPES.map(t => (
+            <button
+              key={t}
+              onClick={() => setForm(f => ({ ...f, type: t, value: '', label: '' }))}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize transition-colors ${
+                form.type === t
+                  ? (TYPE_COLORS[t] ?? 'text-white bg-white/15') + ' border border-current/30'
+                  : 'bg-white/5 text-white/40 hover:text-white/70 border border-transparent'
+              }`}
+            >
+              {t.charAt(0) + t.slice(1).toLowerCase().replace('_', ' ')}
+            </button>
+          ))}
+        </div>
         <div className="flex flex-wrap gap-3 mb-3">
-          <select
-            value={form.type}
-            onChange={(e) => setForm((f) => ({ ...f, type: e.target.value, value: '', label: '' }))}
-            className="bg-white/5 border border-white/10 text-white text-sm px-3 py-2 rounded-xl outline-none focus:border-n3-primary/50"
-          >
-            {TYPES.map((t) => <option key={t} value={t} className="bg-[#111]">{t}</option>)}
-          </select>
           <input
             placeholder={TYPE_PLACEHOLDER[form.type] ?? 'Value (e.g. Bitcoin, Apple, AI infrastructure)'}
             value={form.value}
