@@ -70,7 +70,7 @@ async function processCompetitorScan(job: Job<CompetitorScanJobData>) {
             competitorId,
             userId,
             eventType: result.eventType,
-            title: `${competitor.name} — ${pageType} page change`,
+            title: result.summary.slice(0, 120),
             description: result.summary,
             sourceUrl: url,
             aiSummary: result.summary,

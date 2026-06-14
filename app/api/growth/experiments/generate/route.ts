@@ -12,7 +12,7 @@ export async function POST() {
   const [profile, opportunities, userInsights] = await Promise.all([
     db.businessProfile.findUnique({ where: { userId } }),
     db.growthOpportunity.findMany({
-      where: { userId, status: 'new' },
+      where: { userId, status: { not: 'dismissed' } },
       orderBy: [{ impactScore: 'desc' }, { urgencyScore: 'desc' }],
       take: 5,
     }),
