@@ -42,8 +42,9 @@ export async function GET(req: NextRequest) {
     where.analysis = { isNot: null };
   }
 
-  if (category) {
-    where.source = { category };
+  if (category && category !== 'all') {
+    const cats = category.split(',').map(c => c.trim()).filter(Boolean);
+    where.source = cats.length === 1 ? { category: cats[0] } : { category: { in: cats } };
   }
 
   if (sentiment && sentiment !== 'all') {

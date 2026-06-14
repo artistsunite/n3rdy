@@ -380,28 +380,26 @@ export default function AdvisorPanel() {
           <motion.div key="chat" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <div className="flex flex-col lg:flex-row gap-4 lg:h-[600px]">
               {/* Conversation list */}
-              <div className="lg:w-56 flex-shrink-0 flex flex-row lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-1 lg:pb-0">
+              <div className="lg:w-56 flex-shrink-0 flex flex-row lg:flex-col gap-2 overflow-x-auto lg:overflow-x-hidden lg:overflow-y-auto pb-1 lg:pb-0">
                 <button onClick={newConversation}
-                  className="flex items-center gap-2 w-full liquid-glass hover:bg-white/5 border border-white/10 hover:border-cyan-500/30 text-white/60 hover:text-cyan-300 px-3 py-2.5 rounded-xl text-sm font-medium transition-all">
+                  className="flex items-center gap-2 flex-shrink-0 lg:flex-shrink lg:w-full liquid-glass hover:bg-white/5 border border-white/10 hover:border-cyan-500/30 text-white/60 hover:text-cyan-300 px-3 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap">
                   <Plus size={14} /> New Chat
                 </button>
-                <div className="flex-1 overflow-y-auto space-y-1">
-                  {conversations.length === 0 ? (
-                    <p className="text-white/25 text-xs px-2 pt-2">No conversations yet</p>
-                  ) : (
-                    conversations.map(c => (
-                      <button key={c.id} onClick={() => loadConversation(c.id)}
-                        className={`w-full text-left px-3 py-2.5 rounded-xl text-xs transition-all group relative ${activeConvId === c.id ? 'bg-cyan-500/15 text-white' : 'text-white/50 hover:text-white/70 hover:bg-white/5'}`}>
-                        <div className="truncate pr-5">{c.title ?? 'Untitled'}</div>
-                        <div className="text-white/25 text-xs mt-0.5">{new Date(c.updatedAt).toLocaleDateString()}</div>
-                        <button onClick={e => deleteConversation(c.id, e)}
-                          className="absolute right-2 top-2.5 opacity-0 group-hover:opacity-100 text-white/30 hover:text-red-400 transition-all">
-                          <Trash2 size={11} />
-                        </button>
+                {conversations.length === 0 ? (
+                  <p className="text-white/25 text-xs px-2 py-2 whitespace-nowrap lg:whitespace-normal">No conversations yet</p>
+                ) : (
+                  conversations.map(c => (
+                    <button key={c.id} onClick={() => loadConversation(c.id)}
+                      className={`flex-shrink-0 lg:flex-shrink lg:w-full text-left px-3 py-2.5 rounded-xl text-xs transition-all group relative min-w-[140px] lg:min-w-0 ${activeConvId === c.id ? 'bg-cyan-500/15 text-white' : 'text-white/50 hover:text-white/70 hover:bg-white/5'}`}>
+                      <div className="truncate pr-5">{c.title ?? 'Untitled'}</div>
+                      <div className="text-white/25 text-xs mt-0.5 lg:block hidden">{new Date(c.updatedAt).toLocaleDateString()}</div>
+                      <button onClick={e => deleteConversation(c.id, e)}
+                        className="absolute right-2 top-2.5 opacity-0 group-hover:opacity-100 text-white/30 hover:text-red-400 transition-all">
+                        <Trash2 size={11} />
                       </button>
-                    ))
-                  )}
-                </div>
+                    </button>
+                  ))
+                )}
               </div>
 
               {/* Chat area */}
