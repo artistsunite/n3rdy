@@ -12,6 +12,7 @@ import GoogleSyncBanner from './GoogleSyncBanner';
 import ExpandableWidget from './ExpandableWidget';
 import OverviewControlDrawer, { DashboardFilters } from './OverviewControlDrawer';
 import GrowthIntelligenceWidget from './GrowthIntelligenceWidget';
+import ProfileSetupBanner from './ProfileSetupBanner';
 
 interface SentimentData {
   overall: number;
@@ -332,6 +333,9 @@ export default function OverviewPanel({ userName }: { userName?: string | null }
 
       {/* Google Sync Banner */}
       <GoogleSyncBanner />
+
+      {/* Profile setup nudge for new / incomplete profiles */}
+      <ProfileSetupBanner />
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
