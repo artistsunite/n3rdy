@@ -64,7 +64,7 @@ export default function AdvisorPanel() {
       if (rd.status === 'fulfilled' && rd.value.report) setReport(rd.value.report as AdvisorReport);
       if (cd.status === 'fulfilled') setConversations((cd.value as { conversations: Conversation[] }).conversations ?? []);
       setLoading(false);
-    });
+    }).catch(() => setLoading(false));
   }, []);
 
   useEffect(() => {

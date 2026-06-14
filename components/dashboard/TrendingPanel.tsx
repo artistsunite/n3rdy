@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { TrendingUp, Zap, Star } from 'lucide-react';
+import { TrendingUp, Zap, Star, Plus } from 'lucide-react';
 
 interface TrendingTopic {
   id: string;
@@ -21,6 +21,7 @@ export default function TrendingPanel() {
   const [watchlistValues, setWatchlistValues] = useState<Set<string>>(new Set());
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [period, setPeriod] = useState<Period>('24h');
+  const [addingTopic, setAddingTopic] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -53,6 +54,19 @@ export default function TrendingPanel() {
   function isWatched(topicName: string): boolean {
     const lower = topicName.toLowerCase();
     return Array.from(watchlistValues).some(val => lower.includes(val) || val.includes(lower));
+  }
+
+  async function addToWatchlist(name: string) {
+    setAddingTopic(name);
+    try {
+      const res = await fetch('/api/watchlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'KEYWORD', value: name, label: name }),
+      });
+      if (res.ok) setWatchlistValues(prev => new Set([...prev, name.toLowerCase()]));
+    } catch { /* non-fatal */ }
+    finally { setAddingTopic(null); }
   }
 
   const watchedCount = filtered.filter(t => isWatched(t.name)).length;
@@ -152,7 +166,7 @@ export default function TrendingPanel() {
                   <div className="text-sm font-semibold text-white">{topic.mentionCount}</div>
                   <div className="text-xs text-white/50">mentions</div>
                 </div>
-                <div className="flex-shrink-0">
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <div
                     className={`text-xs font-medium ${
                       topic.sentimentScore > 0.1
@@ -164,6 +178,16 @@ export default function TrendingPanel() {
                   >
                     {topic.sentimentScore > 0.1 ? '↑' : topic.sentimentScore < -0.1 ? '↓' : '—'}
                   </div>
+                  {!watched && (
+                    <button
+                      onClick={() => addToWatchlist(topic.name)}
+                      disabled={addingTopic === topic.name}
+                      className="p-1 text-white/20 hover:text-n3-primary transition-colors disabled:opacity-50"
+                      title={`Watch "${topic.name}"`}
+                    >
+                      <Plus size={14} />
+                    </button>
+                  )}
                 </div>
               </div>
             );
