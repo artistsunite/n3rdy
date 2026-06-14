@@ -451,7 +451,7 @@ export default function AdvisorPanel() {
                               )}
                             </div>
                           )}
-                          <div className="whitespace-pre-wrap">{m.content}</div>
+                          {m.role === 'assistant' ? <MarkdownContent text={m.content} /> : <div className="whitespace-pre-wrap">{m.content}</div>}
                         </div>
                       </motion.div>
                     ))}
@@ -492,6 +492,71 @@ export default function AdvisorPanel() {
       </AnimatePresence>
     </div>
   );
+}
+
+function MarkdownContent({ text }: { text: string }) {
+  const lines = text.split('\n');
+  const elements: React.ReactNode[] = [];
+  let i = 0;
+
+  function inlineFormat(line: string): React.ReactNode {
+    const parts = line.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g);
+    return parts.map((part, idx) => {
+      if (part.startsWith('**') && part.endsWith('**')) return <strong key={idx} className="text-white font-semibold">{part.slice(2, -2)}</strong>;
+      if (part.startsWith('*') && part.endsWith('*')) return <em key={idx} className="italic">{part.slice(1, -1)}</em>;
+      if (part.startsWith('`') && part.endsWith('`')) return <code key={idx} className="bg-white/10 text-cyan-300 px-1 rounded text-xs font-mono">{part.slice(1, -1)}</code>;
+      return part;
+    });
+  }
+
+  while (i < lines.length) {
+    const line = lines[i];
+    if (line.startsWith('### ')) {
+      elements.push(<h3 key={i} className="text-white font-semibold text-sm mt-3 mb-1">{line.slice(4)}</h3>);
+    } else if (line.startsWith('## ')) {
+      elements.push(<h2 key={i} className="text-white font-semibold text-base mt-4 mb-1">{line.slice(3)}</h2>);
+    } else if (line.match(/^[-*] /)) {
+      const items: string[] = [];
+      while (i < lines.length && lines[i].match(/^[-*] /)) {
+        items.push(lines[i].slice(2));
+        i++;
+      }
+      elements.push(
+        <ul key={`ul-${i}`} className="space-y-0.5 my-1">
+          {items.map((item, j) => (
+            <li key={j} className="flex items-start gap-1.5 text-sm">
+              <span className="text-cyan-400/60 mt-0.5 flex-shrink-0">•</span>
+              <span>{inlineFormat(item)}</span>
+            </li>
+          ))}
+        </ul>
+      );
+      continue;
+    } else if (line.match(/^\d+\. /)) {
+      const items: string[] = [];
+      while (i < lines.length && lines[i].match(/^\d+\. /)) {
+        items.push(lines[i].replace(/^\d+\. /, ''));
+        i++;
+      }
+      elements.push(
+        <ol key={`ol-${i}`} className="space-y-0.5 my-1">
+          {items.map((item, j) => (
+            <li key={j} className="flex items-start gap-2 text-sm">
+              <span className="text-cyan-400/70 flex-shrink-0 font-medium min-w-[16px]">{j + 1}.</span>
+              <span>{inlineFormat(item)}</span>
+            </li>
+          ))}
+        </ol>
+      );
+      continue;
+    } else if (line === '') {
+      elements.push(<div key={i} className="h-2" />);
+    } else {
+      elements.push(<p key={i} className="text-sm leading-relaxed">{inlineFormat(line)}</p>);
+    }
+    i++;
+  }
+  return <div className="space-y-0.5">{elements}</div>;
 }
 
 function ReportSection({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
