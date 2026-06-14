@@ -77,6 +77,12 @@ export default function DashboardShell({ children, userName, userImage }: Props)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Refresh badges when navigating away from pages that mark items as read
+  useEffect(() => {
+    fetchBadges();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
   return (
     <div
       className="flex h-screen overflow-hidden"
