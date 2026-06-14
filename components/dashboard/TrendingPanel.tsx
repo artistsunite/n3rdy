@@ -46,10 +46,7 @@ export default function TrendingPanel() {
 
   function isWatched(topicName: string): boolean {
     const lower = topicName.toLowerCase();
-    for (const val of watchlistValues) {
-      if (lower.includes(val) || val.includes(lower)) return true;
-    }
-    return false;
+    return Array.from(watchlistValues).some(val => lower.includes(val) || val.includes(lower));
   }
 
   const watchedCount = filtered.filter(t => isWatched(t.name)).length;
