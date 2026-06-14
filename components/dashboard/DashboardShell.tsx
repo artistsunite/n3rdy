@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import GlobalSearch from '@/components/dashboard/GlobalSearch';
+import NotificationPanel from '@/components/dashboard/NotificationPanel';
 import {
   LayoutDashboard,
   Newspaper,
@@ -14,7 +15,6 @@ import {
   Star,
   FileText,
   Calendar,
-  Bell,
   Settings,
   LogOut,
   Menu,
@@ -184,7 +184,8 @@ export default function DashboardShell({ children, userName, userImage }: Props)
                   {userName[0].toUpperCase()}
                 </div>
               )}
-              <span className="text-xs text-white/40 truncate">{userName}</span>
+              <span className="text-xs text-white/40 truncate flex-1">{userName}</span>
+              <NotificationPanel badges={badges} />
             </div>
           )}
         </div>
@@ -204,7 +205,9 @@ export default function DashboardShell({ children, userName, userImage }: Props)
             <Zap size={16} className="text-[#00E5FF]" />
             <span className="font-bold text-white">N3RDY INTEL</span>
           </div>
-          <Bell size={18} className="ml-auto text-white/40" />
+          <div className="ml-auto">
+            <NotificationPanel badges={badges} />
+          </div>
         </header>
 
         {/* Content */}
