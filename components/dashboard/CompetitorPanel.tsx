@@ -82,7 +82,7 @@ export default function CompetitorPanel() {
   }, []);
 
   useEffect(() => {
-    load();
+    load().catch(() => setLoading(false));
     // Refresh competitor unread counts every 5 minutes
     const interval = setInterval(() => {
       fetch('/api/competitors').then(r => r.json()).then((d: { competitors: Competitor[] }) => {

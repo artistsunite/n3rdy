@@ -33,7 +33,8 @@ export default function EconomicCalendar() {
   useEffect(() => {
     fetch('/api/economic-calendar?days=7')
       .then((r) => r.json())
-      .then((d) => { setEvents(d.events ?? []); setLoading(false); });
+      .then((d) => { setEvents(d.events ?? []); setLoading(false); })
+      .catch(() => setLoading(false));
   }, []);
 
   const grouped = events.reduce<Record<string, EconomicEvent[]>>((acc, e) => {

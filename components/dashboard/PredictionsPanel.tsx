@@ -37,7 +37,7 @@ export default function PredictionsPanel() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load().catch(() => setLoading(false)); }, [load]);
 
   const generate = async () => {
     setGenerating(true);

@@ -77,7 +77,7 @@ export default function NewsFeed() {
   }, [offset, sentiment, minImpact, category, riskLevel, period, debouncedSearch]);
 
   useEffect(() => {
-    load(true);
+    load(true).catch(() => setLoading(false));
   }, [sentiment, minImpact, category, riskLevel, period, debouncedSearch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Derive categories from loaded articles

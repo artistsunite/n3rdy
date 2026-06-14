@@ -31,7 +31,8 @@ export default function SourceManager() {
   useEffect(() => {
     fetch('/api/sources')
       .then((r) => r.json())
-      .then((d) => { setSources(d.sources ?? []); setLoading(false); });
+      .then((d) => { setSources(d.sources ?? []); setLoading(false); })
+      .catch(() => setLoading(false));
   }, []);
 
   const addSource = async () => {

@@ -24,15 +24,16 @@ export default function TrendingPanel() {
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([
+    Promise.allSettled([
       fetch(`/api/trending?period=${period}&limit=30`).then((r) => r.json()),
       fetch('/api/watchlist').then((r) => r.json()),
-    ]).then(([trendData, watchData]) => {
-      setTopics(trendData.topics ?? []);
-      const vals = new Set<string>(
-        (watchData.items ?? []).map((i: { value: string }) => i.value.toLowerCase())
-      );
-      setWatchlistValues(vals);
+    ]).then(([trendResult, watchResult]) => {
+      if (trendResult.status === 'fulfilled') setTopics(trendResult.value.topics ?? []);
+      if (watchResult.status === 'fulfilled') {
+        setWatchlistValues(new Set<string>(
+          (watchResult.value.items ?? []).map((i: { value: string }) => i.value.toLowerCase())
+        ));
+      }
       setLoading(false);
     });
   }, [period]);

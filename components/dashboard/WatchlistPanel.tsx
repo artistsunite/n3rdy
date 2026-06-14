@@ -74,7 +74,8 @@ export default function WatchlistPanel() {
   useEffect(() => {
     fetch('/api/watchlist')
       .then((r) => r.json())
-      .then((d) => { setItems(d.items ?? []); setLoading(false); });
+      .then((d) => { setItems(d.items ?? []); setLoading(false); })
+      .catch(() => setLoading(false));
   }, []);
 
   const addItem = async (type: string, value: string, label?: string) => {

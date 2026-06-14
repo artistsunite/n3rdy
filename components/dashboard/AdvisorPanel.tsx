@@ -57,12 +57,12 @@ export default function AdvisorPanel() {
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    Promise.all([
+    Promise.allSettled([
       fetch('/api/advisor/report').then(r => r.json()),
       fetch('/api/advisor/conversations').then(r => r.json()),
     ]).then(([rd, cd]) => {
-      if (rd.report) setReport(rd.report as AdvisorReport);
-      setConversations((cd as { conversations: Conversation[] }).conversations ?? []);
+      if (rd.status === 'fulfilled' && rd.value.report) setReport(rd.value.report as AdvisorReport);
+      if (cd.status === 'fulfilled') setConversations((cd.value as { conversations: Conversation[] }).conversations ?? []);
       setLoading(false);
     });
   }, []);

@@ -99,7 +99,7 @@ export default function GrowthPanel() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => { loadData().catch(() => setLoading(false)); }, [loadData]);
 
   const generateOpps = useCallback(async () => {
     setGenerating(true);
