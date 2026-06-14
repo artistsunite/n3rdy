@@ -116,9 +116,9 @@ export default function BriefingsPanel() {
     }
   };
 
-  const markRead = async (id: string) => {
-    await fetch('/api/briefings', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+  const markRead = (id: string) => {
     setBriefings((prev) => prev.map((b) => b.id === id ? { ...b, read: true } : b));
+    fetch('/api/briefings', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) }).catch(() => null);
   };
 
   return (

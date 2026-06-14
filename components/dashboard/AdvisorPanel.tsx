@@ -135,7 +135,7 @@ export default function AdvisorPanel() {
 
   const deleteConversation = useCallback(async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    await fetch(`/api/advisor/conversations/${id}`, { method: 'DELETE' });
+    try { await fetch(`/api/advisor/conversations/${id}`, { method: 'DELETE' }); } catch { /* non-fatal */ }
     setConversations(prev => prev.filter(c => c.id !== id));
     if (activeConvId === id) {
       setActiveConvId(null);

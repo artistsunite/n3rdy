@@ -81,19 +81,23 @@ export default function WatchlistPanel() {
   const addItem = async (type: string, value: string, label?: string) => {
     if (!value) return;
     setAdding(true);
-    const res = await fetch('/api/watchlist', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, value, label: label || value }),
-    });
-    const data = await res.json();
-    if (data.item) setItems((prev) => [...prev, data.item]);
-    setForm((f) => ({ ...f, value: '', label: '' }));
-    setAdding(false);
+    try {
+      const res = await fetch('/api/watchlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, value, label: label || value }),
+      });
+      const data = await res.json();
+      if (data.item) setItems((prev) => [...prev, data.item]);
+      setForm((f) => ({ ...f, value: '', label: '' }));
+    } catch { /* non-fatal — form stays open */ }
+    finally { setAdding(false); }
   };
 
   const removeItem = async (id: string) => {
-    await fetch(`/api/watchlist?id=${id}`, { method: 'DELETE' });
+    try {
+      await fetch(`/api/watchlist?id=${id}`, { method: 'DELETE' });
+    } catch { /* non-fatal */ }
     setItems((prev) => prev.filter((i) => i.id !== id));
   };
 
@@ -111,9 +115,11 @@ export default function WatchlistPanel() {
 
   const addSuggestion = async (s: WatchlistSuggestion) => {
     setAddingId(s.value);
-    await addItem(s.type, s.value);
-    setSuggestions((prev) => prev.filter((x) => x.value !== s.value));
-    setAddingId(null);
+    try {
+      await addItem(s.type, s.value);
+      setSuggestions((prev) => prev.filter((x) => x.value !== s.value));
+    } catch { /* non-fatal */ }
+    finally { setAddingId(null); }
   };
 
   const grouped = TYPES.reduce<Record<string, WatchlistItem[]>>((acc, type) => {

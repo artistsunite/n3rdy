@@ -147,12 +147,14 @@ export default function CompetitorPanel() {
 
   const scanAll = useCallback(async () => {
     setScanningAll(true);
-    await Promise.allSettled(competitors.map(c => fetch(`/api/competitors/${c.id}/scan`, { method: 'POST' })));
-    setScanningAll(false);
+    try {
+      await Promise.allSettled(competitors.map(c => fetch(`/api/competitors/${c.id}/scan`, { method: 'POST' })));
+    } catch { /* non-fatal */ }
+    finally { setScanningAll(false); }
   }, [competitors]);
 
   const deleteCompetitor = useCallback(async (id: string) => {
-    await fetch(`/api/competitors/${id}`, { method: 'DELETE' });
+    try { await fetch(`/api/competitors/${id}`, { method: 'DELETE' }); } catch { /* non-fatal */ }
     setCompetitors(prev => prev.filter(c => c.id !== id));
     if (selected?.id === id) setSelected(null);
   }, [selected]);
