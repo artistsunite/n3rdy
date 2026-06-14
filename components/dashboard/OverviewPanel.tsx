@@ -62,6 +62,7 @@ function SentimentLabel({ score }: { score: number }) {
 export default function OverviewPanel({ userName }: { userName?: string | null }) {
   const [sentiment, setSentiment] = useState<SentimentData | null>(null);
   const [articles, setArticles] = useState<Article[]>([]);
+  const [articleTotal, setArticleTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -78,7 +79,7 @@ export default function OverviewPanel({ userName }: { userName?: string | null }
 
   const loadData = useCallback(async (f?: DashboardFilters) => {
     const active = f ?? filters;
-    const params = new URLSearchParams({ limit: '6' });
+    const params = new URLSearchParams({ limit: '6', analysedOnly: 'true', period: active.timeWindow });
     if (active.minImpact > 0) params.set('minImpact', String(active.minImpact));
     if (active.riskLevel !== 'all') params.set('riskLevel', active.riskLevel);
     if (active.category && active.category !== 'all') params.set('category', active.category);
@@ -88,8 +89,9 @@ export default function OverviewPanel({ userName }: { userName?: string | null }
     ]);
     setSentiment(s);
     setArticles(a.articles ?? []);
+    setArticleTotal(a.total ?? 0);
     setLastUpdated(new Date());
-    return (a.articles ?? []).length as number;
+    return (a.total ?? (a.articles ?? []).length) as number;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -166,9 +168,9 @@ export default function OverviewPanel({ userName }: { userName?: string | null }
       spark: sparkData,
     },
     {
-      label: 'Articles Today',
-      value: <span className="text-white font-bold">{articles.length}</span>,
-      sub: 'in your feed',
+      label: filters.timeWindow === '24h' ? 'Articles Today' : `Articles (${filters.timeWindow})`,
+      value: <span className="text-white font-bold">{articleTotal}</span>,
+      sub: 'analysed in feed',
       icon: null,
       spark: [],
     },

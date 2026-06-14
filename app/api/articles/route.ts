@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
   const analysedOnly = searchParams.get('analysedOnly') === 'true';
   const search = searchParams.get('search')?.trim();
   const riskLevel = searchParams.get('riskLevel');
+  const period = searchParams.get('period'); // e.g. '24h', '7d', '30d'
 
   const userSources = await db.userSource.findMany({
     where: { userId: uid, isActive: true },
@@ -30,6 +31,12 @@ export async function GET(req: NextRequest) {
   // Build where clause — analysis is optional unless explicitly filtered
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: any = { sourceId: { in: sourceIds } };
+
+  if (period) {
+    const periodMs: Record<string, number> = { '24h': 86400000, '7d': 604800000, '30d': 2592000000 };
+    const ms = periodMs[period];
+    if (ms) where.publishedAt = { gte: new Date(Date.now() - ms) };
+  }
 
   if (analysedOnly) {
     where.analysis = { isNot: null };
