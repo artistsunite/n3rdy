@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Crosshair, Plus, X, RefreshCw, DollarSign, FileEdit, BookOpen, Newspaper, Package, Users, TrendingUp, Clock, ExternalLink, ChevronRight } from 'lucide-react';
+import { Crosshair, Plus, X, RefreshCw, DollarSign, FileEdit, BookOpen, Newspaper, Package, Users, TrendingUp, Clock, ExternalLink, ChevronRight, Check } from 'lucide-react';
 
 interface Competitor {
   id: string;
@@ -49,6 +49,7 @@ export default function CompetitorPanel() {
   const [events, setEvents] = useState<CompetitorEvent[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [scanQueued, setScanQueued] = useState(false);
   const [scanningAll, setScanningAll] = useState(false);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ name: '', website: '', pricingUrl: '', blogUrl: '', productUrl: '' });
@@ -102,6 +103,14 @@ export default function CompetitorPanel() {
     setScanning(true);
     await fetch(`/api/competitors/${id}/scan`, { method: 'POST' });
     setScanning(false);
+    setScanQueued(true);
+    // Auto-refresh events after 8s to pick up scan results
+    setTimeout(async () => {
+      setScanQueued(false);
+      const r = await fetch(`/api/competitors/${id}/events`);
+      const d = await r.json() as { events: CompetitorEvent[] };
+      setEvents(d.events);
+    }, 8000);
   }, []);
 
   const scanAll = useCallback(async () => {
@@ -240,11 +249,11 @@ export default function CompetitorPanel() {
                     <h3 className="text-white font-semibold">{selected.name}</h3>
                     <button
                       onClick={() => scanCompetitor(selected.id)}
-                      disabled={scanning}
-                      className="flex items-center gap-2 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 text-cyan-300 px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
+                      disabled={scanning || scanQueued}
+                      className={`flex items-center gap-2 border px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${scanQueued ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-cyan-500/20 hover:bg-cyan-500/30 border-cyan-500/30 text-cyan-300'}`}
                     >
-                      <RefreshCw size={12} className={scanning ? 'animate-spin' : ''} />
-                      {scanning ? 'Scanning…' : 'Scan Now'}
+                      {scanQueued ? <Check size={12} /> : <RefreshCw size={12} className={scanning ? 'animate-spin' : ''} />}
+                      {scanning ? 'Scanning…' : scanQueued ? 'Queued — refreshing…' : 'Scan Now'}
                     </button>
                   </div>
                   <div className="flex flex-wrap gap-2">
