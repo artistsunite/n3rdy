@@ -48,3 +48,15 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ competitor }, { status: 201 });
 }
+
+export async function PATCH() {
+  const session = await auth();
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { count } = await db.competitorEvent.updateMany({
+    where: { userId: session.user.id, isRead: false },
+    data: { isRead: true },
+  });
+
+  return NextResponse.json({ ok: true, markedRead: count });
+}

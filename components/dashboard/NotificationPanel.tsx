@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Bell, X, Crosshair, Zap, Brain } from 'lucide-react';
+import { Bell, X, Crosshair, Zap, Brain, CheckCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 
@@ -25,6 +25,7 @@ export default function NotificationPanel({ badges }: Props) {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
+  const [markingRead, setMarkingRead] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const totalCount = badges.unreadEvents + badges.newOpportunities;
 
@@ -88,6 +89,16 @@ export default function NotificationPanel({ badges }: Props) {
     return () => document.removeEventListener('mousedown', onClick);
   }, [open]);
 
+  async function markAllRead() {
+    setMarkingRead(true);
+    try {
+      await fetch('/api/competitors', { method: 'PATCH' });
+      setNotifications(prev => prev.filter(n => n.type !== 'competitor_event'));
+    } finally {
+      setMarkingRead(false);
+    }
+  }
+
   function timeAgo(ts: string) {
     const diff = (Date.now() - new Date(ts).getTime()) / 1000;
     if (diff < 60) return 'just now';
@@ -128,9 +139,22 @@ export default function NotificationPanel({ badges }: Props) {
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
               <span className="text-white text-sm font-semibold">Notifications</span>
-              <button onClick={() => setOpen(false)} className="text-white/30 hover:text-white/60 transition-colors">
-                <X size={14} />
-              </button>
+              <div className="flex items-center gap-2">
+                {badges.unreadEvents > 0 && (
+                  <button
+                    onClick={markAllRead}
+                    disabled={markingRead}
+                    className="flex items-center gap-1 text-[10px] text-white/30 hover:text-white/60 transition-colors disabled:opacity-40"
+                    title="Mark all competitor events as read"
+                  >
+                    <CheckCheck size={12} />
+                    Mark read
+                  </button>
+                )}
+                <button onClick={() => setOpen(false)} className="text-white/30 hover:text-white/60 transition-colors">
+                  <X size={14} />
+                </button>
+              </div>
             </div>
 
             <div className="max-h-80 overflow-y-auto">
