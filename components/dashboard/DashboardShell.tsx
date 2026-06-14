@@ -66,13 +66,15 @@ export default function DashboardShell({ children, userName, userImage }: Props)
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  function fetchBadges() {
+    fetch('/api/dashboard/badges').then(r => r.json()).then((d: Badges) => setBadges(d)).catch(() => null);
+  }
+
   useEffect(() => {
-    function fetchBadges() {
-      fetch('/api/dashboard/badges').then(r => r.json()).then((d: Badges) => setBadges(d)).catch(() => null);
-    }
     fetchBadges();
     const interval = setInterval(fetchBadges, 3 * 60 * 1000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -185,7 +187,7 @@ export default function DashboardShell({ children, userName, userImage }: Props)
                 </div>
               )}
               <span className="text-xs text-white/40 truncate flex-1">{userName}</span>
-              <NotificationPanel badges={badges} />
+              <NotificationPanel badges={badges} onBadgesRefresh={fetchBadges} />
             </div>
           )}
         </div>

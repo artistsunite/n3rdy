@@ -19,9 +19,10 @@ interface Badges { unreadEvents: number; newOpportunities: number }
 
 interface Props {
   badges: Badges;
+  onBadgesRefresh?: () => void;
 }
 
-export default function NotificationPanel({ badges }: Props) {
+export default function NotificationPanel({ badges, onBadgesRefresh }: Props) {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
@@ -91,6 +92,7 @@ export default function NotificationPanel({ badges }: Props) {
     try {
       await fetch('/api/competitors', { method: 'PATCH' });
       setNotifications(prev => prev.filter(n => n.type !== 'competitor_event'));
+      onBadgesRefresh?.();
     } finally {
       setMarkingRead(false);
     }
