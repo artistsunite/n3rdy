@@ -34,7 +34,7 @@ interface Article {
     riskLevel: string;
     shortSummary: string;
     bullishBearish: string;
-    sectorsAffected: unknown[];
+    sectorsAffected: string[];
   } | null;
 }
 
@@ -289,7 +289,7 @@ export default function OverviewPanel({ userName }: { userName?: string | null }
           marketImpactScore={a.analysis?.marketImpactScore}
           riskLevel={a.analysis?.riskLevel}
           bullishBearish={a.analysis?.bullishBearish}
-          sectorsAffected={a.analysis?.sectorsAffected as string[]}
+          sectorsAffected={a.analysis?.sectorsAffected}
         />
       ))}
       {articles.length === 0 && (

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Plus, Trash2, Rss, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, Rss, ExternalLink, ToggleLeft, ToggleRight } from 'lucide-react';
 
 interface Source {
   id: string;
@@ -11,6 +11,7 @@ interface Source {
   category: string;
   region: string;
   trustScore: number;
+  isActive: boolean;
   userSourceId?: string;
   priority: number;
 }
@@ -22,6 +23,8 @@ export default function SourceManager() {
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ name: '', url: '', rssUrl: '', category: 'general' });
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [toggling, setToggling] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/sources')
@@ -39,7 +42,7 @@ export default function SourceManager() {
     });
     const data = await res.json();
     if (data.source) {
-      setSources((prev) => [...prev, { ...data.source, priority: 5, userSourceId: data.userSource?.id }]);
+      setSources((prev) => [...prev, { ...data.source, isActive: true, priority: 5, userSourceId: data.userSource?.id }]);
       setForm({ name: '', url: '', rssUrl: '', category: 'general' });
     }
     setAdding(false);
@@ -49,6 +52,21 @@ export default function SourceManager() {
     await fetch(`/api/sources?sourceId=${sourceId}`, { method: 'DELETE' });
     setSources((prev) => prev.filter((s) => s.id !== sourceId));
   };
+
+  const toggleSource = async (sourceId: string, current: boolean) => {
+    setToggling(sourceId);
+    setSources(prev => prev.map(s => s.id === sourceId ? { ...s, isActive: !current } : s));
+    await fetch('/api/sources', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sourceId, isActive: !current }),
+    });
+    setToggling(null);
+  };
+
+  const sourceCategories = ['all', ...Array.from(new Set(sources.map(s => s.category))).sort()];
+  const filtered = categoryFilter === 'all' ? sources : sources.filter(s => s.category === categoryFilter);
+  const activeCount = sources.filter(s => s.isActive).length;
 
   return (
     <div className="space-y-5">
@@ -60,7 +78,7 @@ export default function SourceManager() {
       {/* Add form */}
       <div className="liquid-glass-card rounded-xl p-5">
         <h2 className="text-sm font-semibold text-white mb-4">Add Source</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
           <input
             placeholder="Source name (e.g. Reuters)"
             value={form.name}
@@ -79,13 +97,24 @@ export default function SourceManager() {
             onChange={(e) => setForm((f) => ({ ...f, rssUrl: e.target.value }))}
             className="bg-white/5 border border-white/10 text-white text-sm px-3 py-2 rounded-lg outline-none focus:border-n3-primary/50 transition-colors placeholder:text-white/30"
           />
-          <select
-            value={form.category}
-            onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-            className="bg-white/5 border border-white/10 text-white text-sm px-3 py-2 rounded-lg outline-none focus:border-n3-primary/50 transition-colors"
-          >
-            {CATEGORIES.map((c) => <option key={c} value={c} className="bg-[#111] capitalize">{c}</option>)}
-          </select>
+        </div>
+        <div className="mb-4">
+          <p className="text-xs text-white/40 mb-2">Category</p>
+          <div className="flex flex-wrap gap-1.5">
+            {CATEGORIES.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setForm(f => ({ ...f, category: cat }))}
+                className={`px-3 py-1 rounded-full text-xs font-medium capitalize transition-colors ${
+                  form.category === cat
+                    ? 'bg-n3-primary/15 text-n3-primary border border-n3-primary/30'
+                    : 'bg-white/5 text-white/40 hover:text-white/70 border border-transparent'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
         </div>
         <button
           onClick={addSource}
@@ -108,36 +137,68 @@ export default function SourceManager() {
           <p className="text-white/50 text-sm">No sources yet. Add your first RSS feed above.</p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {sources.map((source) => (
-            <div key={source.id} className="flex items-center gap-3 liquid-glass-card rounded-xl px-4 py-3 group">
-              <Rss size={16} className="text-n3-primary flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-white truncate">{source.name}</span>
-                  <span className="text-xs bg-white/5 text-white/50 px-1.5 py-0.5 rounded capitalize flex-shrink-0">{source.category}</span>
-                </div>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs text-white/50 truncate">{source.url}</span>
-                  {source.rssUrl && <span className="text-xs text-n3-success flex-shrink-0">RSS ✓</span>}
-                </div>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <span className="text-xs text-white/50 hidden sm:block">
-                  Trust: <span className={source.trustScore >= 0.8 ? 'text-n3-success' : source.trustScore >= 0.6 ? 'text-n3-warning' : 'text-n3-danger'}>{(source.trustScore * 100).toFixed(0)}%</span>
-                </span>
-                <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-white/50 hover:text-n3-primary transition-colors">
-                  <ExternalLink size={14} />
-                </a>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex flex-wrap gap-1.5">
+              {sourceCategories.map(cat => (
                 <button
-                  onClick={() => removeSource(source.id)}
-                  className="text-white/50 hover:text-n3-danger transition-colors opacity-0 group-hover:opacity-100"
+                  key={cat}
+                  onClick={() => setCategoryFilter(cat)}
+                  className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize transition-colors ${
+                    categoryFilter === cat
+                      ? 'bg-n3-primary/15 text-n3-primary border border-n3-primary/30'
+                      : 'bg-white/5 text-white/40 hover:text-white/70 border border-transparent'
+                  }`}
                 >
-                  <Trash2 size={14} />
+                  {cat === 'all' ? `All (${sources.length})` : cat}
                 </button>
-              </div>
+              ))}
             </div>
-          ))}
+            <span className="text-xs text-white/30">{activeCount} active</span>
+          </div>
+
+          <div className="space-y-2">
+            {filtered.map((source) => (
+              <div
+                key={source.id}
+                className={`flex items-center gap-3 liquid-glass-card rounded-xl px-4 py-3 group transition-opacity ${source.isActive ? '' : 'opacity-50'}`}
+              >
+                <Rss size={16} className={`flex-shrink-0 ${source.isActive ? 'text-n3-primary' : 'text-white/30'}`} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-white truncate">{source.name}</span>
+                    <span className="text-xs bg-white/5 text-white/50 px-1.5 py-0.5 rounded capitalize flex-shrink-0">{source.category}</span>
+                    {source.rssUrl && <span className="text-xs text-n3-success flex-shrink-0">RSS</span>}
+                  </div>
+                  <span className="text-xs text-white/40 truncate block">{source.url}</span>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-xs text-white/50 hidden sm:block">
+                    Trust: <span className={source.trustScore >= 0.8 ? 'text-n3-success' : source.trustScore >= 0.6 ? 'text-n3-warning' : 'text-n3-danger'}>{(source.trustScore * 100).toFixed(0)}%</span>
+                  </span>
+                  <button
+                    onClick={() => toggleSource(source.id, source.isActive)}
+                    disabled={toggling === source.id}
+                    className="text-white/40 hover:text-white/70 transition-colors"
+                    title={source.isActive ? 'Disable source' : 'Enable source'}
+                  >
+                    {source.isActive
+                      ? <ToggleRight size={18} className="text-n3-success" />
+                      : <ToggleLeft size={18} />}
+                  </button>
+                  <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-white/50 hover:text-n3-primary transition-colors">
+                    <ExternalLink size={14} />
+                  </a>
+                  <button
+                    onClick={() => removeSource(source.id)}
+                    className="text-white/50 hover:text-n3-danger transition-colors opacity-0 group-hover:opacity-100"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

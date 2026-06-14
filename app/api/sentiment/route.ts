@@ -56,17 +56,21 @@ export async function GET(req: NextRequest) {
     dominant: data.bullish > data.bearish ? 'bullish' : data.bearish > data.bullish ? 'bearish' : 'neutral',
   }));
 
-  // Time-series sentiment (hourly for last 24h)
-  const hourly: Record<string, number[]> = {};
+  // Time-series: hourly for 24h, daily for 7d/30d
+  const buckets: Record<string, number[]> = {};
   for (const analysis of analyses) {
-    const hour = new Date(analysis.article.publishedAt);
-    hour.setMinutes(0, 0, 0);
-    const key = hour.toISOString();
-    if (!hourly[key]) hourly[key] = [];
-    hourly[key].push(analysis.sentimentScore);
+    const dt = new Date(analysis.article.publishedAt);
+    if (hours <= 24) {
+      dt.setMinutes(0, 0, 0);
+    } else {
+      dt.setHours(0, 0, 0, 0);
+    }
+    const key = dt.toISOString();
+    if (!buckets[key]) buckets[key] = [];
+    buckets[key].push(analysis.sentimentScore);
   }
 
-  const timeSeries = Object.entries(hourly)
+  const timeSeries = Object.entries(buckets)
     .map(([time, scores]) => ({
       time,
       avgScore: scores.reduce((a, b) => a + b, 0) / scores.length,
