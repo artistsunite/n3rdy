@@ -18,8 +18,8 @@ interface Article {
     riskLevel: string;
     shortSummary: string;
     bullishBearish: string;
-    sectorsAffected: unknown[];
-    keyFacts: unknown[];
+    sectorsAffected: string[];
+    keyFacts: string[];
   } | null;
 }
 
@@ -32,6 +32,7 @@ export default function NewsFeed() {
   const [loading, setLoading] = useState(true);
   const [sentiment, setSentiment] = useState('all');
   const [minImpact, setMinImpact] = useState(0);
+  const [category, setCategory] = useState('all');
   const [search, setSearch] = useState('');
 
   const load = useCallback(async (reset = false) => {
@@ -39,6 +40,7 @@ export default function NewsFeed() {
     const params = new URLSearchParams({ limit: '20', offset: String(reset ? 0 : offset) });
     if (sentiment !== 'all') params.set('sentiment', sentiment);
     if (minImpact > 0) params.set('minImpact', String(minImpact));
+    if (category !== 'all') params.set('category', category);
     const res = await fetch(`/api/articles?${params}`);
     const data = await res.json();
     if (reset) {
@@ -54,7 +56,10 @@ export default function NewsFeed() {
 
   useEffect(() => {
     load(true);
-  }, [sentiment, minImpact]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sentiment, minImpact, category]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Derive categories from loaded articles
+  const categories = ['all', ...Array.from(new Set(articles.map(a => a.source.category).filter(Boolean)))].sort((a, b) => a === 'all' ? -1 : b === 'all' ? 1 : a.localeCompare(b));
 
   return (
     <div className="space-y-5">
@@ -115,6 +120,25 @@ export default function NewsFeed() {
         </div>
       </div>
 
+      {/* Category filter */}
+      {categories.length > 2 && (
+        <div className="flex flex-wrap gap-1.5">
+          {categories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setCategory(cat)}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize transition-colors ${
+                category === cat
+                  ? 'bg-n3-primary/15 text-n3-primary border border-n3-primary/30'
+                  : 'bg-white/5 text-white/40 hover:text-white/70 border border-transparent'
+              }`}
+            >
+              {cat === 'all' ? 'All categories' : cat}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Articles */}
       {(() => {
         const q = search.toLowerCase().trim();
@@ -157,7 +181,8 @@ export default function NewsFeed() {
                 marketImpactScore={a.analysis?.marketImpactScore}
                 riskLevel={a.analysis?.riskLevel}
                 bullishBearish={a.analysis?.bullishBearish}
-                sectorsAffected={a.analysis?.sectorsAffected as string[]}
+                sectorsAffected={a.analysis?.sectorsAffected}
+                keyFacts={a.analysis?.keyFacts}
               />
               ))}
             </div>
