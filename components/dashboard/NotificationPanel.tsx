@@ -31,34 +31,26 @@ export default function NotificationPanel({ badges }: Props) {
 
   async function load() {
     setLoading(true);
-    const [evtCompRes, oppRes] = await Promise.allSettled([
-      fetch('/api/competitors').then(r => r.json()),
+    const [evtRes, oppRes] = await Promise.allSettled([
+      fetch('/api/competitors/events?unreadOnly=true&take=8').then(r => r.json()),
       fetch('/api/growth/opportunities?status=new').then(r => r.json()),
     ]);
 
     const notifs: Notification[] = [];
 
-    if (evtCompRes.status === 'fulfilled') {
-      const competitors: Array<{ id: string; name: string }> = evtCompRes.value.competitors ?? [];
-      type EventItem = { id: string; title: string; eventType: string; detectedAt: string; importance: string; isRead: boolean };
-      const eventResults = await Promise.all(
-        competitors.slice(0, 4).map(c =>
-          fetch(`/api/competitors/${c.id}/events`).then(x => x.json()).catch(() => ({ events: [] }))
-            .then((r: { events: EventItem[] }) => ({ competitor: c, events: r.events ?? [] }))
-        )
-      );
-      for (const { competitor: c, events } of eventResults) {
-        for (const e of events.filter(e => !e.isRead).slice(0, 2)) {
-          notifs.push({
-            id: e.id,
-            type: 'competitor_event',
-            title: e.title,
-            subtitle: c.name,
-            href: '/dashboard/competitors',
-            timestamp: e.detectedAt,
-            importance: e.importance,
-          });
-        }
+    if (evtRes.status === 'fulfilled') {
+      type EventItem = { id: string; title: string; eventType: string; detectedAt: string; importance: string; competitor: { id: string; name: string } };
+      const events: EventItem[] = evtRes.value.events ?? [];
+      for (const e of events) {
+        notifs.push({
+          id: e.id,
+          type: 'competitor_event',
+          title: e.title,
+          subtitle: e.competitor.name,
+          href: '/dashboard/competitors',
+          timestamp: e.detectedAt,
+          importance: e.importance,
+        });
       }
     }
 

@@ -49,48 +49,49 @@ export async function GET(req: Request) {
     }
   } catch { /* non-fatal */ }
 
-  // Auto-generate growth opportunities for users with profiles who haven't had one in 20h
+  // Auto-generate growth opportunities and advisor reports for users with profiles
   let opportunitiesGenerated = 0;
-  try {
-    const twentyHoursAgo = new Date(Date.now() - 20 * 60 * 60 * 1000);
-    const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
-    const rawSecret = process.env.CRON_SECRET ?? '';
-    const secret = (rawSecret.charCodeAt(0) === 0xFEFF ? rawSecret.slice(1) : rawSecret).trim();
-
-    const profiles = await db.businessProfile.findMany({ select: { userId: true } });
-    for (const { userId } of profiles) {
-      const recent = await db.growthOpportunity.findFirst({
-        where: { userId, generatedAt: { gte: twentyHoursAgo } },
-      });
-      if (!recent) {
-        const r = await fetch(`${baseUrl}/api/growth/opportunities/generate`, {
-          method: 'POST',
-          headers: { 'x-cron-user-id': userId, 'x-cron-secret': secret },
-        });
-        if (r.ok) opportunitiesGenerated++;
-      }
-    }
-  } catch { /* non-fatal */ }
-
-  // Auto-generate advisor reports for users with profiles who haven't had one in 24h
   let reportsGenerated = 0;
   try {
+    const twentyHoursAgo = new Date(Date.now() - 20 * 60 * 60 * 1000);
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
     const rawSecret = process.env.CRON_SECRET ?? '';
     const secret = (rawSecret.charCodeAt(0) === 0xFEFF ? rawSecret.slice(1) : rawSecret).trim();
 
     const profiles = await db.businessProfile.findMany({ select: { userId: true } });
-    for (const { userId } of profiles) {
-      const recentReport = await db.advisorReport.findFirst({
-        where: { userId, generatedAt: { gte: twentyFourHoursAgo } },
-      });
-      if (!recentReport) {
-        const r = await fetch(`${baseUrl}/api/advisor/report`, {
-          method: 'POST',
-          headers: { 'x-cron-user-id': userId, 'x-cron-secret': secret },
-        });
-        if (r.ok) reportsGenerated++;
+    const userIds = profiles.map(p => p.userId);
+
+    if (userIds.length > 0) {
+      // Batch-fetch recent opportunities and reports in 2 queries
+      const [recentOpps, recentReports] = await Promise.all([
+        db.growthOpportunity.findMany({
+          where: { userId: { in: userIds }, generatedAt: { gte: twentyHoursAgo } },
+          select: { userId: true },
+        }),
+        db.advisorReport.findMany({
+          where: { userId: { in: userIds }, generatedAt: { gte: twentyFourHoursAgo } },
+          select: { userId: true },
+        }),
+      ]);
+      const hasRecentOpp = new Set(recentOpps.map(o => o.userId));
+      const hasRecentReport = new Set(recentReports.map(r => r.userId));
+
+      for (const { userId } of profiles) {
+        if (!hasRecentOpp.has(userId)) {
+          const r = await fetch(`${baseUrl}/api/growth/opportunities/generate`, {
+            method: 'POST',
+            headers: { 'x-cron-user-id': userId, 'x-cron-secret': secret },
+          });
+          if (r.ok) opportunitiesGenerated++;
+        }
+        if (!hasRecentReport.has(userId)) {
+          const r = await fetch(`${baseUrl}/api/advisor/report`, {
+            method: 'POST',
+            headers: { 'x-cron-user-id': userId, 'x-cron-secret': secret },
+          });
+          if (r.ok) reportsGenerated++;
+        }
       }
     }
   } catch { /* non-fatal */ }

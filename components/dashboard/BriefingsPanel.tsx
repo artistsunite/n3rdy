@@ -50,29 +50,19 @@ export default function BriefingsPanel() {
   const loadGrowthSignals = async () => {
     const [oppRes, evtRes] = await Promise.all([
       fetch('/api/growth/opportunities?status=new'),
-      fetch('/api/competitors'),
+      fetch('/api/competitors/events?take=6'),
     ]);
     if (!oppRes.ok || !evtRes.ok) return;
     const [oppData, evtData] = await Promise.all([
       oppRes.json() as Promise<{ opportunities: GrowthSignal['opportunities'] }>,
-      evtRes.json() as Promise<{ competitors: Array<{ id: string }> }>,
+      evtRes.json() as Promise<{ events: GrowthSignal['competitorEvents'] }>,
     ]);
-
-    // Collect latest events from all competitors in parallel
-    const topCompetitors = (evtData.competitors ?? []).slice(0, 3);
-    const eventResponses = await Promise.all(
-      topCompetitors.map(c => fetch(`/api/competitors/${c.id}/events`).then(r => r.ok ? r.json() as Promise<{ events: GrowthSignal['competitorEvents'] }> : null))
-    );
-    const competitorEvents: GrowthSignal['competitorEvents'] = eventResponses
-      .flatMap(d => (d?.events ?? []).slice(0, 2));
 
     setGrowthSignals({
       opportunities: (oppData.opportunities ?? [])
         .sort((a, b) => b.urgencyScore - a.urgencyScore)
         .slice(0, 3),
-      competitorEvents: competitorEvents
-        .sort((a, b) => new Date(b.detectedAt).getTime() - new Date(a.detectedAt).getTime())
-        .slice(0, 3),
+      competitorEvents: (evtData.events ?? []).slice(0, 3),
     });
   };
 
