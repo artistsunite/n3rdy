@@ -32,50 +32,52 @@ export default function NotificationPanel({ badges, onBadgesRefresh }: Props) {
 
   async function load() {
     setLoading(true);
-    const [evtRes, oppRes] = await Promise.allSettled([
-      fetch('/api/competitors/events?unreadOnly=true&take=8').then(r => r.json()),
-      fetch('/api/growth/opportunities?status=new').then(r => r.json()),
-    ]);
+    try {
+      const [evtRes, oppRes] = await Promise.allSettled([
+        fetch('/api/competitors/events?unreadOnly=true&take=8').then(r => r.json()),
+        fetch('/api/growth/opportunities?status=new').then(r => r.json()),
+      ]);
 
-    const notifs: Notification[] = [];
+      const notifs: Notification[] = [];
 
-    if (evtRes.status === 'fulfilled') {
-      type EventItem = { id: string; title: string; eventType: string; detectedAt: string; importance: string; competitor: { id: string; name: string } };
-      const events: EventItem[] = evtRes.value.events ?? [];
-      for (const e of events) {
-        notifs.push({
-          id: e.id,
-          type: 'competitor_event',
-          title: e.title,
-          subtitle: e.competitor.name,
-          href: '/dashboard/competitors',
-          timestamp: e.detectedAt,
-          importance: e.importance,
-        });
+      if (evtRes.status === 'fulfilled') {
+        type EventItem = { id: string; title: string; eventType: string; detectedAt: string; importance: string; competitor: { id: string; name: string } };
+        const events: EventItem[] = evtRes.value.events ?? [];
+        for (const e of events) {
+          notifs.push({
+            id: e.id,
+            type: 'competitor_event',
+            title: e.title,
+            subtitle: e.competitor.name,
+            href: '/dashboard/competitors',
+            timestamp: e.detectedAt,
+            importance: e.importance,
+          });
+        }
       }
-    }
 
-    if (oppRes.status === 'fulfilled') {
-      const opps: Array<{ id: string; title: string; type: string; urgencyScore: number; generatedAt: string }> = oppRes.value.opportunities ?? [];
-      for (const o of opps.slice(0, 3)) {
-        notifs.push({
-          id: o.id,
-          type: 'opportunity',
-          title: o.title,
-          subtitle: `Urgency ${(o.urgencyScore * 10).toFixed(1)}/10`,
-          href: '/dashboard/growth',
-          timestamp: o.generatedAt,
-        });
+      if (oppRes.status === 'fulfilled') {
+        const opps: Array<{ id: string; title: string; type: string; urgencyScore: number; generatedAt: string }> = oppRes.value.opportunities ?? [];
+        for (const o of opps.slice(0, 3)) {
+          notifs.push({
+            id: o.id,
+            type: 'opportunity',
+            title: o.title,
+            subtitle: `Urgency ${(o.urgencyScore * 10).toFixed(1)}/10`,
+            href: '/dashboard/growth',
+            timestamp: o.generatedAt,
+          });
+        }
       }
-    }
 
-    notifs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    setNotifications(notifs.slice(0, 8));
-    setLoading(false);
+      notifs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      setNotifications(notifs.slice(0, 8));
+    } catch { /* non-fatal — notifications stay empty */ }
+    finally { setLoading(false); }
   }
 
   useEffect(() => {
-    if (open) load();
+    if (open) load().catch(() => null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
