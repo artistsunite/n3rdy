@@ -304,8 +304,11 @@ export default function WatchlistPanel() {
                   {articleResults.slice(0, 5).map(a => {
                     const timeAgo = (() => {
                       const diff = Date.now() - new Date(a.publishedAt).getTime();
+                      const d = Math.floor(diff / 86400000);
                       const h = Math.floor(diff / 3600000);
-                      return h > 0 ? `${h}h ago` : `${Math.floor(diff / 60000)}m ago`;
+                      if (d > 0) return `${d}d ago`;
+                      if (h > 0) return `${h}h ago`;
+                      return `${Math.floor(diff / 60000)}m ago`;
                     })();
                     return (
                       <a
