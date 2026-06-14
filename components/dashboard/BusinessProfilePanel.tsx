@@ -77,6 +77,7 @@ export default function BusinessProfilePanel() {
   const [activeTab, setActiveTab] = useState<Tab>('info');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showWizard, setShowWizard] = useState(false);
 
@@ -91,10 +92,18 @@ export default function BusinessProfilePanel() {
 
   const save = useCallback(async () => {
     setSaving(true);
-    await fetch('/api/business-profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(profile) });
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setSaveError(null);
+    try {
+      const res = await fetch('/api/business-profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(profile) });
+      if (!res.ok) throw new Error('Save failed');
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch {
+      setSaveError('Failed to save. Please try again.');
+      setTimeout(() => setSaveError(null), 3000);
+    } finally {
+      setSaving(false);
+    }
   }, [profile]);
 
   const completion = countCompletion(profile);
@@ -156,6 +165,10 @@ export default function BusinessProfilePanel() {
           </button>
         ))}
       </div>
+
+      {saveError && (
+        <p className="text-sm text-n3-danger bg-n3-danger/10 border border-n3-danger/20 rounded-xl px-4 py-3">{saveError}</p>
+      )}
 
       {!profile.businessType && !profile.businessName && (
         <motion.div
