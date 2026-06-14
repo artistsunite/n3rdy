@@ -259,8 +259,36 @@ export default function GrowthPanel() {
             {activeOpps.length === 0 ? (
               <div className="liquid-glass-card rounded-2xl p-8 text-center">
                 <TrendingUp className="mx-auto mb-3 text-white/20" size={32} />
-                <p className="text-white/40 text-sm">No opportunities yet.</p>
-                <p className="text-white/25 text-xs mt-1">Complete your Business Profile then click &quot;Find Opportunities&quot;.</p>
+                <p className="text-white/40 text-sm">{dismissedOpps.length > 0 ? 'All opportunities dismissed.' : 'No opportunities yet.'}</p>
+                <p className="text-white/25 text-xs mt-1">{dismissedOpps.length > 0 ? '' : 'Complete your Business Profile then click “Find Opportunities”.'}</p>
+                {dismissedOpps.length > 0 && (
+                  <button
+                    onClick={() => setShowDismissed(v => !v)}
+                    className="mt-3 text-xs text-white/40 hover:text-white/60 transition-colors"
+                  >
+                    {showDismissed ? 'Hide' : 'Show'} {dismissedOpps.length} dismissed
+                  </button>
+                )}
+                {showDismissed && (
+                  <div className="mt-3 space-y-2 text-left">
+                    {dismissedOpps.map(opp => (
+                      <div key={opp.id} className="liquid-glass-card rounded-xl px-4 py-3 flex items-center justify-between gap-3 opacity-50">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${TYPE_COLORS[opp.type] ?? 'bg-white/10 text-white/60'}`}>
+                            {opp.type.replace(/_/g, ' ')}
+                          </span>
+                          <span className="text-white/60 text-sm truncate">{opp.title}</span>
+                        </div>
+                        <button
+                          onClick={() => updateOpportunity(opp.id, 'new')}
+                          className="flex-shrink-0 text-xs text-white/40 hover:text-cyan-400 bg-white/5 hover:bg-cyan-500/10 px-2 py-1 rounded-lg transition-all"
+                        >
+                          Restore
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ) : (
               <>
