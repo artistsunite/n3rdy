@@ -55,32 +55,35 @@ export default function PredictionsPanel() {
   };
 
   const handleOutcome = async (id: string, outcome: 'CORRECT' | 'INCORRECT' | 'PARTIAL') => {
-    const res = await fetch(`/api/predictions/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ outcome }),
-    });
-    if (res.ok) {
-      setPredictions(prev => prev.map(p => p.id === id ? { ...p, status: outcome } : p));
-      // Reload accuracy stats
-      const r2 = await fetch('/api/predictions');
-      if (r2.ok) { const d = await r2.json(); setAccuracy(d.accuracy ?? []); }
-    }
+    try {
+      const res = await fetch(`/api/predictions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ outcome }),
+      });
+      if (res.ok) {
+        setPredictions(prev => prev.map(p => p.id === id ? { ...p, status: outcome } : p));
+        const r2 = await fetch('/api/predictions');
+        if (r2.ok) { const d = await r2.json(); setAccuracy(d.accuracy ?? []); }
+      }
+    } catch { /* non-fatal */ }
   };
 
   const handleFeedback = async (predictionId: string, feedbackId: string, answer: string) => {
-    const res = await fetch(`/api/predictions/${predictionId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ feedbackId, answer }),
-    });
-    const data = await res.json();
-    setPredictions(prev => prev.map(p =>
-      p.id === predictionId
-        ? { ...p, feedback: (p.feedback ?? []).map(f => f.id === feedbackId ? { ...f, answer } : f) }
-        : p
-    ));
-    return { insight: data.insight };
+    try {
+      const res = await fetch(`/api/predictions/${predictionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ feedbackId, answer }),
+      });
+      const data = await res.json();
+      setPredictions(prev => prev.map(p =>
+        p.id === predictionId
+          ? { ...p, feedback: (p.feedback ?? []).map(f => f.id === feedbackId ? { ...f, answer } : f) }
+          : p
+      ));
+      return { insight: data.insight };
+    } catch { return { insight: null }; }
   };
 
   const now = new Date();

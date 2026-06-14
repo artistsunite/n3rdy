@@ -38,33 +38,37 @@ export default function SourceManager() {
   const addSource = async () => {
     if (!form.name || !form.url) return;
     setAdding(true);
-    const res = await fetch('/api/sources', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
-    });
-    const data = await res.json();
-    if (data.source) {
-      setSources((prev) => [...prev, { ...data.source, isActive: true, priority: 5, userSourceId: data.userSource?.id }]);
-      setForm({ name: '', url: '', rssUrl: '', category: 'general' });
-    }
-    setAdding(false);
+    try {
+      const res = await fetch('/api/sources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (data.source) {
+        setSources((prev) => [...prev, { ...data.source, isActive: true, priority: 5, userSourceId: data.userSource?.id }]);
+        setForm({ name: '', url: '', rssUrl: '', category: 'general' });
+      }
+    } catch { /* non-fatal — form stays open */ }
+    finally { setAdding(false); }
   };
 
   const removeSource = async (sourceId: string) => {
-    await fetch(`/api/sources?sourceId=${sourceId}`, { method: 'DELETE' });
+    try { await fetch(`/api/sources?sourceId=${sourceId}`, { method: 'DELETE' }); } catch { /* non-fatal */ }
     setSources((prev) => prev.filter((s) => s.id !== sourceId));
   };
 
   const toggleSource = async (sourceId: string, current: boolean) => {
     setToggling(sourceId);
     setSources(prev => prev.map(s => s.id === sourceId ? { ...s, isActive: !current } : s));
-    await fetch('/api/sources', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sourceId, isActive: !current }),
-    });
-    setToggling(null);
+    try {
+      await fetch('/api/sources', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sourceId, isActive: !current }),
+      });
+    } catch { setSources(prev => prev.map(s => s.id === sourceId ? { ...s, isActive: current } : s)); }
+    finally { setToggling(null); }
   };
 
   const sourceCategories = ['all', ...Array.from(new Set(sources.map(s => s.category))).sort()];

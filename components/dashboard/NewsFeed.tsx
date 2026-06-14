@@ -57,23 +57,25 @@ export default function NewsFeed() {
 
   const load = useCallback(async (reset = false) => {
     setLoading(true);
-    const params = new URLSearchParams({ limit: '20', offset: String(reset ? 0 : offset), period });
-    if (sentiment !== 'all') params.set('sentiment', sentiment);
-    if (minImpact > 0) params.set('minImpact', String(minImpact));
-    if (category !== 'all') params.set('category', category);
-    if (riskLevel !== 'all') params.set('riskLevel', riskLevel);
-    if (debouncedSearch.length >= 2) params.set('search', debouncedSearch);
-    const res = await fetch(`/api/articles?${params}`);
-    const data = await res.json();
-    if (reset) {
-      setArticles(data.articles ?? []);
-      setOffset(20);
-    } else {
-      setArticles((prev) => [...prev, ...(data.articles ?? [])]);
-      setOffset((o) => o + 20);
-    }
-    setTotal(data.total ?? 0);
-    setLoading(false);
+    try {
+      const params = new URLSearchParams({ limit: '20', offset: String(reset ? 0 : offset), period });
+      if (sentiment !== 'all') params.set('sentiment', sentiment);
+      if (minImpact > 0) params.set('minImpact', String(minImpact));
+      if (category !== 'all') params.set('category', category);
+      if (riskLevel !== 'all') params.set('riskLevel', riskLevel);
+      if (debouncedSearch.length >= 2) params.set('search', debouncedSearch);
+      const res = await fetch(`/api/articles?${params}`);
+      const data = await res.json();
+      if (reset) {
+        setArticles(data.articles ?? []);
+        setOffset(20);
+      } else {
+        setArticles((prev) => [...prev, ...(data.articles ?? [])]);
+        setOffset((o) => o + 20);
+      }
+      setTotal(data.total ?? 0);
+    } catch { /* non-fatal — articles stay as-is */ }
+    finally { setLoading(false); }
   }, [offset, sentiment, minImpact, category, riskLevel, period, debouncedSearch]);
 
   useEffect(() => {
