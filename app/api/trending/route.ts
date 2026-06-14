@@ -18,7 +18,8 @@ export async function GET(req: NextRequest) {
 
   // If no pre-computed topics, derive from recent entity mention counts
   if (topics.length === 0) {
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const periodMs: Record<string, number> = { '24h': 86400000, '7d': 604800000, '30d': 2592000000 };
+    const since = new Date(Date.now() - (periodMs[period] ?? periodMs['24h']));
     const recentArticleIds = await db.article.findMany({
       where: { publishedAt: { gte: since } },
       select: { id: true },

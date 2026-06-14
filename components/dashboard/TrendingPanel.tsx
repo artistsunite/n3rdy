@@ -12,15 +12,20 @@ interface TrendingTopic {
   sentimentScore: number;
 }
 
+type Period = '24h' | '7d' | '30d';
+const PERIOD_LABELS: Record<Period, string> = { '24h': 'last 24 hours', '7d': 'last 7 days', '30d': 'last 30 days' };
+
 export default function TrendingPanel() {
   const [topics, setTopics] = useState<TrendingTopic[]>([]);
   const [loading, setLoading] = useState(true);
   const [watchlistValues, setWatchlistValues] = useState<Set<string>>(new Set());
   const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [period, setPeriod] = useState<Period>('24h');
 
   useEffect(() => {
+    setLoading(true);
     Promise.all([
-      fetch('/api/trending?period=24h&limit=30').then((r) => r.json()),
+      fetch(`/api/trending?period=${period}&limit=30`).then((r) => r.json()),
       fetch('/api/watchlist').then((r) => r.json()),
     ]).then(([trendData, watchData]) => {
       setTopics(trendData.topics ?? []);
@@ -30,7 +35,7 @@ export default function TrendingPanel() {
       setWatchlistValues(vals);
       setLoading(false);
     });
-  }, []);
+  }, [period]);
 
   const categories = useMemo(() => {
     const cats = Array.from(new Set(topics.map(t => t.category))).filter(Boolean).sort();
@@ -53,9 +58,19 @@ export default function TrendingPanel() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold text-white">Trending Topics</h1>
-        <p className="text-white/50 text-sm mt-1">Most mentioned topics across your sources in the last 24 hours</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Trending Topics</h1>
+          <p className="text-white/50 text-sm mt-1">Most mentioned topics across your sources in the {PERIOD_LABELS[period]}</p>
+        </div>
+        <div className="flex gap-1 p-1 liquid-glass-card rounded-lg">
+          {(['24h', '7d', '30d'] as Period[]).map(p => (
+            <button key={p} onClick={() => setPeriod(p)}
+              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${period === p ? 'bg-n3-primary/10 text-n3-primary' : 'text-white/50 hover:text-white'}`}>
+              {p}
+            </button>
+          ))}
+        </div>
       </div>
 
       {!loading && categories.length > 2 && (
