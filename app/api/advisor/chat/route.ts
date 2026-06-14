@@ -14,7 +14,7 @@ async function buildSystemPrompt(userId: string): Promise<string> {
       take: 5,
     }),
     db.competitorEvent.findMany({
-      where: { userId },
+      where: { userId, detectedAt: { gte: new Date(Date.now() - 7 * 24 * 3600 * 1000) } },
       orderBy: { detectedAt: 'desc' },
       take: 5,
     }),
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
   // Stream response
   const stream = client.messages.stream({
     model: 'claude-opus-4-8',
-    max_tokens: 1024,
+    max_tokens: 2048,
     system: systemPrompt,
     messages: history,
   });

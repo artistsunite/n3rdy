@@ -78,7 +78,12 @@ export async function GET() {
   }
 
   return NextResponse.json({
-    sources: userSources.map((us) => ({ ...us.source, priority: us.priority, isActive: us.isActive, userSourceId: us.id })),
+    sources: userSources.map((us) => ({
+      ...us.source,
+      priority: us.priority,
+      isActive: us.isActive,
+      userSourceId: us.id,
+    })),
   });
 }
 

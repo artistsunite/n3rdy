@@ -14,6 +14,7 @@ interface Source {
   isActive: boolean;
   userSourceId?: string;
   priority: number;
+  lastFetchedAt?: string | null;
 }
 
 const CATEGORIES = ['markets', 'crypto', 'macro', 'geopolitics', 'technology', 'business', 'general'];
@@ -173,9 +174,22 @@ export default function SourceManager() {
                   <span className="text-xs text-white/40 truncate block">{source.url}</span>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className="text-xs text-white/50 hidden sm:block">
-                    Trust: <span className={source.trustScore >= 0.8 ? 'text-n3-success' : source.trustScore >= 0.6 ? 'text-n3-warning' : 'text-n3-danger'}>{(source.trustScore * 100).toFixed(0)}%</span>
-                  </span>
+                  <div className="hidden sm:flex flex-col items-end text-right">
+                    <span className="text-xs text-white/50">
+                      Trust: <span className={source.trustScore >= 0.8 ? 'text-n3-success' : source.trustScore >= 0.6 ? 'text-n3-warning' : 'text-n3-danger'}>{(source.trustScore * 100).toFixed(0)}%</span>
+                    </span>
+                    {source.lastFetchedAt && (
+                      <span className="text-[10px] text-white/25">
+                        {(() => {
+                          const diff = Date.now() - new Date(source.lastFetchedAt).getTime();
+                          const h = Math.round(diff / 3600000);
+                          if (h < 1) return 'fetched just now';
+                          if (h < 24) return `fetched ${h}h ago`;
+                          return `fetched ${Math.round(h / 24)}d ago`;
+                        })()}
+                      </span>
+                    )}
+                  </div>
                   <button
                     onClick={() => toggleSource(source.id, source.isActive)}
                     disabled={toggling === source.id}
