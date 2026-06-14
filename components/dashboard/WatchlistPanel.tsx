@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Plus, Trash2, Star } from 'lucide-react';
+import { Plus, Trash2, Star, Sparkles, X, Loader2 } from 'lucide-react';
 
 interface WatchlistItem {
   id: string;
@@ -9,6 +9,12 @@ interface WatchlistItem {
   value: string;
   label: string;
   priority: number;
+}
+
+interface WatchlistSuggestion {
+  value: string;
+  type: 'KEYWORD' | 'COMPANY' | 'SECTOR' | 'PERSON';
+  reason: string;
 }
 
 const TYPES = ['KEYWORD', 'COMPANY', 'ASSET', 'COUNTRY', 'PERSON', 'SECTOR', 'WEBSITE', 'SOCIAL_PAGE'];
@@ -33,6 +39,10 @@ export default function WatchlistPanel() {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ type: 'KEYWORD', value: '', label: '' });
   const [adding, setAdding] = useState(false);
+  const [suggestions, setSuggestions] = useState<WatchlistSuggestion[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [addingId, setAddingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/watchlist')
@@ -40,13 +50,13 @@ export default function WatchlistPanel() {
       .then((d) => { setItems(d.items ?? []); setLoading(false); });
   }, []);
 
-  const addItem = async () => {
-    if (!form.value) return;
+  const addItem = async (type: string, value: string, label?: string) => {
+    if (!value) return;
     setAdding(true);
     const res = await fetch('/api/watchlist', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, label: form.label || form.value }),
+      body: JSON.stringify({ type, value, label: label || value }),
     });
     const data = await res.json();
     if (data.item) setItems((prev) => [...prev, data.item]);
@@ -59,17 +69,98 @@ export default function WatchlistPanel() {
     setItems((prev) => prev.filter((i) => i.id !== id));
   };
 
+  const loadSuggestions = async () => {
+    setLoadingSuggestions(true);
+    setShowSuggestions(true);
+    try {
+      const res = await fetch('/api/watchlist/suggestions');
+      const data = await res.json();
+      setSuggestions(data.suggestions ?? []);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
+  const addSuggestion = async (s: WatchlistSuggestion) => {
+    setAddingId(s.value);
+    await addItem(s.type, s.value);
+    setSuggestions((prev) => prev.filter((x) => x.value !== s.value));
+    setAddingId(null);
+  };
+
   const grouped = TYPES.reduce<Record<string, WatchlistItem[]>>((acc, type) => {
     acc[type] = items.filter((i) => i.type === type);
     return acc;
   }, {});
 
+  const existingValues = new Set(items.map((i) => i.value.toLowerCase()));
+
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold text-white">Watchlist</h1>
-        <p className="text-white/50 text-sm mt-1">Track keywords, companies, assets, websites, and social pages</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Watchlist</h1>
+          <p className="text-white/50 text-sm mt-1">Track keywords, companies, assets, websites, and social pages</p>
+        </div>
+        <button
+          onClick={loadSuggestions}
+          disabled={loadingSuggestions}
+          className="flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 text-sm font-medium transition-colors disabled:opacity-50"
+        >
+          {loadingSuggestions ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+          AI Suggest
+        </button>
       </div>
+
+      {/* AI Suggestions */}
+      {showSuggestions && (
+        <div className="liquid-glass-card rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Sparkles size={14} className="text-purple-400" />
+              <span className="text-sm font-semibold text-white">AI Suggestions</span>
+              <span className="text-xs text-white/40">based on your business profile &amp; trends</span>
+            </div>
+            <button onClick={() => setShowSuggestions(false)} className="text-white/30 hover:text-white/60">
+              <X size={14} />
+            </button>
+          </div>
+
+          {loadingSuggestions ? (
+            <div className="space-y-2">
+              {[1, 2, 3, 4].map((i) => <div key={i} className="h-10 bg-white/5 rounded-xl animate-pulse" />)}
+            </div>
+          ) : suggestions.length === 0 ? (
+            <p className="text-sm text-white/40 text-center py-3">
+              No suggestions — set up your Business Profile for personalised recommendations.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {suggestions
+                .filter((s) => !existingValues.has(s.value.toLowerCase()))
+                .map((s) => (
+                  <div key={s.value} className="flex items-center gap-3 p-3 rounded-xl bg-white/3 hover:bg-white/5 transition-colors">
+                    <span className={`text-xs font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${TYPE_COLORS[s.type] ?? 'text-white/50 bg-white/5'}`}>
+                      {s.type.charAt(0)}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white">{s.value}</p>
+                      <p className="text-xs text-white/40 truncate">{s.reason}</p>
+                    </div>
+                    <button
+                      onClick={() => addSuggestion(s)}
+                      disabled={addingId === s.value}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-500/15 text-purple-300 hover:bg-purple-500/25 text-xs font-medium transition-colors disabled:opacity-50 flex-shrink-0"
+                    >
+                      {addingId === s.value ? <Loader2 size={11} className="animate-spin" /> : <Plus size={11} />}
+                      Add
+                    </button>
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Add form */}
       <div className="liquid-glass-card rounded-2xl p-5">
@@ -86,7 +177,7 @@ export default function WatchlistPanel() {
             placeholder={TYPE_PLACEHOLDER[form.type] ?? 'Value (e.g. Bitcoin, Apple, AI infrastructure)'}
             value={form.value}
             onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))}
-            onKeyDown={(e) => e.key === 'Enter' && addItem()}
+            onKeyDown={(e) => e.key === 'Enter' && addItem(form.type, form.value, form.label)}
             className="flex-1 min-w-48 bg-white/5 border border-white/10 text-white text-sm px-3 py-2 rounded-xl outline-none focus:border-n3-primary/50 placeholder:text-white/30"
           />
           <input
@@ -97,7 +188,7 @@ export default function WatchlistPanel() {
           />
         </div>
         <button
-          onClick={addItem}
+          onClick={() => addItem(form.type, form.value, form.label)}
           disabled={adding || !form.value}
           className="inline-flex items-center gap-2 bg-n3-primary text-n3-bg px-4 py-2 rounded-xl text-sm font-semibold hover:bg-n3-primary/90 disabled:opacity-50 transition-colors"
         >

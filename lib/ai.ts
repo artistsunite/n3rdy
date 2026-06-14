@@ -932,3 +932,59 @@ Return ONLY valid JSON matching this structure.`;
   }
   return JSON.parse(extractJSON(text)) as AdvisorReportContent;
 }
+
+export interface WatchlistSuggestion {
+  value: string;
+  type: 'KEYWORD' | 'COMPANY' | 'SECTOR' | 'PERSON';
+  reason: string;
+}
+
+export async function suggestWatchlistKeywords(params: {
+  businessProfile: {
+    businessName?: string | null;
+    businessType?: string | null;
+    industry?: string | null;
+    description?: string | null;
+    keywords: unknown;
+    priorityTopics: unknown;
+  };
+  existingWatchlist: Array<{ value: string; type: string }>;
+  trendingTopics: Array<{ name: string; category: string }>;
+}): Promise<WatchlistSuggestion[]> {
+  const { businessProfile, existingWatchlist, trendingTopics } = params;
+
+  const existingText = existingWatchlist.map(w => `${w.type}: ${w.value}`).join(', ') || 'none';
+  const trendingText = trendingTopics.slice(0, 15).map(t => `${t.name} (${t.category})`).join(', ') || 'none';
+
+  const prompt = `You are a business intelligence assistant. Suggest 5-8 watchlist items this business should track based on their profile and current trends.
+
+BUSINESS:
+Name: ${businessProfile.businessName ?? 'Unknown'}
+Type: ${businessProfile.businessType ?? 'Unknown'}
+Industry: ${businessProfile.industry ?? 'Unknown'}
+Description: ${businessProfile.description ?? 'N/A'}
+Keywords: ${JSON.stringify(businessProfile.keywords)}
+Priority Topics: ${JSON.stringify(businessProfile.priorityTopics)}
+
+ALREADY TRACKING: ${existingText}
+TRENDING NOW: ${trendingText}
+
+Suggest items NOT already in their watchlist. Each suggestion must be:
+- type: KEYWORD (search term), COMPANY (competitor or partner), SECTOR (market segment), or PERSON (key influencer/executive)
+- value: the exact term to track (short, 1-4 words)
+- reason: why this matters for their business (1 sentence)
+
+Return ONLY valid JSON array: [{"value":"...","type":"KEYWORD","reason":"..."},...]`;
+
+  let text: string;
+  try {
+    const message = await client.messages.create({ model: 'claude-opus-4-8', max_tokens: 600, messages: [{ role: 'user', content: prompt }] });
+    text = message.content[0].type === 'text' ? message.content[0].text : '';
+  } catch (err) {
+    if (isCreditsError(err)) {
+      try { text = await callOpenAI(prompt, 600); }
+      catch { text = await callGemini(prompt, 600); }
+    } else throw err;
+  }
+  return JSON.parse(extractJSON(text)) as WatchlistSuggestion[];
+}
