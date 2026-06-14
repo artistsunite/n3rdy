@@ -88,16 +88,28 @@ export default function SentimentPage() {
         ) : (
           <>
             {/* Overall score card */}
+            {(() => {
+              const totalBullish = data.byCategory.reduce((sum, c) => sum + c.bullish, 0);
+              const totalBearish = data.byCategory.reduce((sum, c) => sum + c.bearish, 0);
+              const totalArticles = data.byCategory.reduce((sum, c) => sum + c.articleCount, 0);
+              return (
             <div className="grid grid-cols-3 gap-4">
-              <div className="col-span-1 liquid-glass-card rounded-xl p-5 text-center">
-                <div className="text-xs text-white/50 uppercase tracking-wider mb-2">Overall</div>
-                <div className={`text-4xl font-bold ${data.overall > 0.1 ? 'text-n3-success' : data.overall < -0.1 ? 'text-n3-danger' : 'text-white/50'}`}>
+              <div className="col-span-1 liquid-glass-card rounded-xl p-5 flex flex-col items-center justify-center gap-2">
+                <div className="text-xs text-white/50 uppercase tracking-wider">Overall Sentiment</div>
+                <div className={`text-5xl font-bold ${data.overall > 0.1 ? 'text-n3-success' : data.overall < -0.1 ? 'text-n3-danger' : 'text-white/50'}`}>
                   {data.overall > 0.1 ? '↑' : data.overall < -0.1 ? '↓' : '→'}
                 </div>
-                <div className="text-sm text-white mt-1 font-medium">
+                <div className="text-sm text-white font-semibold">
                   {data.overall > 0.1 ? 'Bullish' : data.overall < -0.1 ? 'Bearish' : 'Neutral'}
                 </div>
-                <div className="text-xs text-white/50 mt-1">{data.overall.toFixed(3)}</div>
+                <div className="text-xs text-white/40 font-mono">{data.overall >= 0 ? '+' : ''}{data.overall.toFixed(3)}</div>
+                {totalArticles > 0 && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs bg-n3-success/10 text-n3-success px-2 py-0.5 rounded-full font-medium">↑{totalBullish}</span>
+                    <span className="text-xs bg-n3-danger/10 text-n3-danger px-2 py-0.5 rounded-full font-medium">↓{totalBearish}</span>
+                  </div>
+                )}
+                <div className="text-[10px] text-white/25">{totalArticles} articles analysed</div>
               </div>
 
               <div className="col-span-2 liquid-glass-card rounded-xl p-5">
@@ -117,6 +129,8 @@ export default function SentimentPage() {
                 </ResponsiveContainer>
               </div>
             </div>
+              );
+            })()}
 
             {/* Time series */}
             {timeData.length > 0 && (
@@ -144,12 +158,37 @@ export default function SentimentPage() {
                   <div key={c.category} className="flex items-center gap-4 px-5 py-3">
                     <span className="text-sm text-white capitalize w-28 flex-shrink-0">{c.category}</span>
                     <div className="flex-1">
-                      <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${c.avgScore > 0.1 ? 'bg-n3-success' : c.avgScore < -0.1 ? 'bg-n3-danger' : 'bg-white/20'}`}
-                          style={{ width: `${Math.abs(c.avgScore) * 50 + 50}%` }}
-                        />
+                      {/* Stacked bullish/neutral/bearish bar */}
+                      <div className="h-1.5 bg-white/10 rounded-full overflow-hidden flex">
+                        {c.articleCount > 0 && (
+                          <>
+                            <div
+                              className="h-full bg-n3-success"
+                              style={{ width: `${(c.bullish / c.articleCount) * 100}%` }}
+                            />
+                            <div
+                              className="h-full bg-white/20"
+                              style={{ width: `${((c.articleCount - c.bullish - c.bearish) / c.articleCount) * 100}%` }}
+                            />
+                            <div
+                              className="h-full bg-n3-danger"
+                              style={{ width: `${(c.bearish / c.articleCount) * 100}%` }}
+                            />
+                          </>
+                        )}
                       </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {c.bullish > 0 && (
+                        <span className="text-[10px] bg-n3-success/10 text-n3-success px-1.5 py-0.5 rounded-full font-medium">
+                          ↑{c.bullish}
+                        </span>
+                      )}
+                      {c.bearish > 0 && (
+                        <span className="text-[10px] bg-n3-danger/10 text-n3-danger px-1.5 py-0.5 rounded-full font-medium">
+                          ↓{c.bearish}
+                        </span>
+                      )}
                     </div>
                     <span className={`text-sm font-medium w-16 text-right flex-shrink-0 ${c.avgScore > 0.1 ? 'text-n3-success' : c.avgScore < -0.1 ? 'text-n3-danger' : 'text-white/50'}`}>
                       {c.dominant}

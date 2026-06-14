@@ -75,7 +75,7 @@ export default function NotificationPanel({ badges, onBadgesRefresh }: Props) {
   }
 
   useEffect(() => {
-    if (open && notifications.length === 0) load();
+    if (open) load();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 

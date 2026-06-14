@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, TrendingUp, FlaskConical, Loader2, ChevronRight, Check, X, Play, Square, ClipboardList, ArrowRight } from 'lucide-react';
+import { Zap, TrendingUp, FlaskConical, Loader2, ChevronRight, Check, X, Play, Square, ClipboardList, ArrowRight, AlertCircle } from 'lucide-react';
 
 interface GrowthOpportunity {
   id: string;
@@ -79,6 +79,7 @@ export default function GrowthPanel() {
   const [opportunities, setOpportunities] = useState<GrowthOpportunity[]>([]);
   const [experiments, setExperiments] = useState<GrowthExperiment[]>([]);
   const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [resultInputs, setResultInputs] = useState<Record<string, string>>({});
   const [savingResult, setSavingResult] = useState<string | null>(null);
@@ -101,19 +102,21 @@ export default function GrowthPanel() {
 
   const generateOpps = useCallback(async () => {
     setGenerating(true);
+    setGenerateError(null);
     const r = await fetch('/api/growth/opportunities/generate', { method: 'POST' });
     const d = await r.json() as { opportunities?: GrowthOpportunity[]; error?: string };
     if (d.opportunities) setOpportunities(prev => [...d.opportunities!, ...prev]);
-    else if (d.error) alert(d.error);
+    else if (d.error) setGenerateError(d.error === 'Business profile required' ? 'Complete your Business Profile first to generate opportunities.' : d.error);
     setGenerating(false);
   }, []);
 
   const generateExps = useCallback(async () => {
     setGenerating(true);
+    setGenerateError(null);
     const r = await fetch('/api/growth/experiments/generate', { method: 'POST' });
     const d = await r.json() as { experiments?: GrowthExperiment[]; error?: string };
     if (d.experiments) setExperiments(prev => [...d.experiments!, ...prev]);
-    else if (d.error) alert(d.error);
+    else if (d.error) setGenerateError(d.error === 'Business profile required' ? 'Complete your Business Profile first to generate experiments.' : d.error);
     setGenerating(false);
   }, []);
 
@@ -192,6 +195,16 @@ export default function GrowthPanel() {
           {generating ? 'Generating…' : tab === 'opportunities' ? 'Find Opportunities' : 'Generate Experiments'}
         </button>
       </div>
+
+      {generateError && (
+        <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+          <AlertCircle size={15} className="text-red-400 mt-0.5 flex-shrink-0" />
+          <p className="text-sm text-red-400 flex-1">{generateError}</p>
+          <button onClick={() => setGenerateError(null)} className="text-red-400/50 hover:text-red-400 transition-colors flex-shrink-0">
+            <X size={13} />
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-4">
         {[
