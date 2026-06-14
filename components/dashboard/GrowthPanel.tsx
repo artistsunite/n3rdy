@@ -104,21 +104,25 @@ export default function GrowthPanel() {
   const generateOpps = useCallback(async () => {
     setGenerating(true);
     setGenerateError(null);
-    const r = await fetch('/api/growth/opportunities/generate', { method: 'POST' });
-    const d = await r.json() as { opportunities?: GrowthOpportunity[]; error?: string };
-    if (d.opportunities) setOpportunities(prev => [...d.opportunities!, ...prev]);
-    else if (d.error) setGenerateError(d.error === 'Business profile required' ? 'Complete your Business Profile first to generate opportunities.' : d.error);
-    setGenerating(false);
+    try {
+      const r = await fetch('/api/growth/opportunities/generate', { method: 'POST' });
+      const d = await r.json() as { opportunities?: GrowthOpportunity[]; error?: string };
+      if (d.opportunities) setOpportunities(prev => [...d.opportunities!, ...prev]);
+      else if (d.error) setGenerateError(d.error === 'Business profile required' ? 'Complete your Business Profile first to generate opportunities.' : d.error);
+    } catch { setGenerateError('Network error. Please try again.'); }
+    finally { setGenerating(false); }
   }, []);
 
   const generateExps = useCallback(async () => {
     setGenerating(true);
     setGenerateError(null);
-    const r = await fetch('/api/growth/experiments/generate', { method: 'POST' });
-    const d = await r.json() as { experiments?: GrowthExperiment[]; error?: string };
-    if (d.experiments) setExperiments(prev => [...d.experiments!, ...prev]);
-    else if (d.error) setGenerateError(d.error === 'Business profile required' ? 'Complete your Business Profile first to generate experiments.' : d.error);
-    setGenerating(false);
+    try {
+      const r = await fetch('/api/growth/experiments/generate', { method: 'POST' });
+      const d = await r.json() as { experiments?: GrowthExperiment[]; error?: string };
+      if (d.experiments) setExperiments(prev => [...d.experiments!, ...prev]);
+      else if (d.error) setGenerateError(d.error === 'Business profile required' ? 'Complete your Business Profile first to generate experiments.' : d.error);
+    } catch { setGenerateError('Network error. Please try again.'); }
+    finally { setGenerating(false); }
   }, []);
 
   const updateOpportunity = useCallback(async (id: string, status: string) => {
@@ -143,13 +147,15 @@ export default function GrowthPanel() {
     const result = resultInputs[id]?.trim();
     if (!result) return;
     setSavingResult(id);
-    await fetch(`/api/growth/experiments/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ result }),
-    });
-    setExperiments(prev => prev.map(e => e.id === id ? { ...e, result } : e));
-    setSavingResult(null);
+    try {
+      await fetch(`/api/growth/experiments/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ result }),
+      });
+      setExperiments(prev => prev.map(e => e.id === id ? { ...e, result } : e));
+    } catch { /* non-fatal */ }
+    finally { setSavingResult(null); }
   }, [resultInputs]);
 
   const [oppTypeFilter, setOppTypeFilter] = useState<string>('all');

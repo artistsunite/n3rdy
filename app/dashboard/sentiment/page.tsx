@@ -34,7 +34,8 @@ export default function SentimentPage() {
     setLoading(true);
     fetch(`/api/sentiment?period=${period}`)
       .then((r) => r.json())
-      .then((d) => { setData(d); setLoading(false); });
+      .then((d) => { setData(d); setLoading(false); })
+      .catch(() => setLoading(false));
   }, [period]);
 
   const chartData = (data?.byCategory ?? []).map((c) => ({

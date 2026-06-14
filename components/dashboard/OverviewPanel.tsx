@@ -134,7 +134,7 @@ export default function OverviewPanel({ userName }: { userName?: string | null }
   useEffect(() => {
     if (autoRefreshRef.current) clearInterval(autoRefreshRef.current);
     if (filters.autoRefreshInterval > 0) {
-      autoRefreshRef.current = setInterval(() => loadData(), filters.autoRefreshInterval * 60000);
+      autoRefreshRef.current = setInterval(() => loadData().catch(() => null), filters.autoRefreshInterval * 60000);
     }
     return () => { if (autoRefreshRef.current) clearInterval(autoRefreshRef.current); };
   }, [filters.autoRefreshInterval, loadData]);

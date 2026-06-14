@@ -99,41 +99,50 @@ export default function CompetitorPanel() {
     setSelected(c);
     setEvents([]);
     setLoadingEvents(true);
-    const r = await fetch(`/api/competitors/${c.id}/events`);
-    const d = await r.json() as { events: CompetitorEvent[] };
-    setEvents(d.events);
-    setLoadingEvents(false);
-    // Clear the unread badge on the list item after events are marked read
-    setCompetitors(prev => prev.map(comp =>
-      comp.id === c.id ? { ...comp, _count: { events: 0 } } : comp
-    ));
+    try {
+      const r = await fetch(`/api/competitors/${c.id}/events`);
+      const d = await r.json() as { events: CompetitorEvent[] };
+      setEvents(d.events);
+      // Clear the unread badge on the list item after events are marked read
+      setCompetitors(prev => prev.map(comp =>
+        comp.id === c.id ? { ...comp, _count: { events: 0 } } : comp
+      ));
+    } catch { /* non-fatal — events stay empty */ }
+    finally { setLoadingEvents(false); }
   }, []);
 
   const addCompetitor = useCallback(async () => {
     if (!form.name.trim()) return;
-    const r = await fetch('/api/competitors', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
-    });
-    const d = await r.json() as { competitor: Competitor };
-    setCompetitors(prev => [...prev, { ...d.competitor, _count: { events: 0 } }]);
-    setForm({ name: '', website: '', pricingUrl: '', blogUrl: '', productUrl: '' });
-    setShowAdd(false);
+    try {
+      const r = await fetch('/api/competitors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const d = await r.json() as { competitor: Competitor };
+      if (d.competitor) {
+        setCompetitors(prev => [...prev, { ...d.competitor, _count: { events: 0 } }]);
+        setForm({ name: '', website: '', pricingUrl: '', blogUrl: '', productUrl: '' });
+        setShowAdd(false);
+      }
+    } catch { /* non-fatal — form stays open */ }
   }, [form]);
 
   const scanCompetitor = useCallback(async (id: string) => {
     setScanning(true);
-    await fetch(`/api/competitors/${id}/scan`, { method: 'POST' });
-    setScanning(false);
-    setScanQueued(true);
-    // Auto-refresh events after 8s to pick up scan results
-    setTimeout(async () => {
-      setScanQueued(false);
-      const r = await fetch(`/api/competitors/${id}/events`);
-      const d = await r.json() as { events: CompetitorEvent[] };
-      setEvents(d.events);
-    }, 8000);
+    try {
+      await fetch(`/api/competitors/${id}/scan`, { method: 'POST' });
+      setScanQueued(true);
+      // Auto-refresh events after 8s to pick up scan results
+      setTimeout(async () => {
+        setScanQueued(false);
+        fetch(`/api/competitors/${id}/events`)
+          .then(r => r.json())
+          .then((d: { events: CompetitorEvent[] }) => setEvents(d.events))
+          .catch(() => null);
+      }, 8000);
+    } catch { /* non-fatal */ }
+    finally { setScanning(false); }
   }, []);
 
   const scanAll = useCallback(async () => {

@@ -107,20 +107,24 @@ export default function AdvisorPanel() {
   const generate = useCallback(async () => {
     setGenerating(true);
     setError(null);
-    const r = await fetch('/api/advisor/report', { method: 'POST' });
-    const d = await r.json() as { report?: AdvisorReport; error?: string };
-    if (d.error) setError(d.error === 'Business profile required' ? 'Complete your Business Profile first.' : d.error);
-    else if (d.report) setReport(d.report);
-    setGenerating(false);
+    try {
+      const r = await fetch('/api/advisor/report', { method: 'POST' });
+      const d = await r.json() as { report?: AdvisorReport; error?: string };
+      if (d.error) setError(d.error === 'Business profile required' ? 'Complete your Business Profile first.' : d.error);
+      else if (d.report) setReport(d.report);
+    } catch { setError('Network error. Please try again.'); }
+    finally { setGenerating(false); }
   }, []);
 
   const loadConversation = useCallback(async (id: string) => {
     setLoadingConv(true);
     setActiveConvId(id);
-    const r = await fetch(`/api/advisor/conversations/${id}`);
-    const d = await r.json() as { conversation: { messages: Message[] } };
-    setMessages(d.conversation.messages ?? []);
-    setLoadingConv(false);
+    try {
+      const r = await fetch(`/api/advisor/conversations/${id}`);
+      const d = await r.json() as { conversation: { messages: Message[] } };
+      setMessages(d.conversation.messages ?? []);
+    } catch { /* non-fatal — messages stay empty */ }
+    finally { setLoadingConv(false); }
   }, []);
 
   const newConversation = useCallback(() => {
