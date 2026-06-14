@@ -15,6 +15,7 @@ interface Source {
   userSourceId?: string;
   priority: number;
   lastFetchedAt?: string | null;
+  articleCount?: number;
 }
 
 const CATEGORIES = ['markets', 'crypto', 'macro', 'geopolitics', 'technology', 'business', 'general'];
@@ -174,10 +175,15 @@ export default function SourceManager() {
                   <span className="text-xs text-white/40 truncate block">{source.url}</span>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <div className="hidden sm:flex flex-col items-end text-right">
+                  <div className="hidden sm:flex flex-col items-end text-right gap-0.5">
                     <span className="text-xs text-white/50">
                       Trust: <span className={source.trustScore >= 0.8 ? 'text-n3-success' : source.trustScore >= 0.6 ? 'text-n3-warning' : 'text-n3-danger'}>{(source.trustScore * 100).toFixed(0)}%</span>
                     </span>
+                    {source.articleCount !== undefined && (
+                      <span className="text-[10px] text-white/35">
+                        {source.articleCount} {source.articleCount === 1 ? 'article' : 'articles'}
+                      </span>
+                    )}
                     {source.lastFetchedAt && (
                       <span className="text-[10px] text-white/25">
                         {(() => {

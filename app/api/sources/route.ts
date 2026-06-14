@@ -51,9 +51,11 @@ export async function GET() {
   // Ensure the global source catalogue is populated
   await ensureSourcesSeeded();
 
+  const sourceInclude = { include: { source: { include: { _count: { select: { articles: true } } } } } } as const;
+
   const userSources = await db.userSource.findMany({
     where: { userId: uid },
-    include: { source: true },
+    ...sourceInclude,
     orderBy: [{ priority: 'desc' }, { addedAt: 'asc' }],
   });
 
@@ -69,17 +71,18 @@ export async function GET() {
     }
     const seeded = await db.userSource.findMany({
       where: { userId: uid },
-      include: { source: true },
+      ...sourceInclude,
       orderBy: [{ priority: 'desc' }, { addedAt: 'asc' }],
     });
     return NextResponse.json({
-      sources: seeded.map((us) => ({ ...us.source, priority: us.priority, isActive: us.isActive, userSourceId: us.id })),
+      sources: seeded.map((us) => ({ ...us.source, articleCount: us.source._count.articles, priority: us.priority, isActive: us.isActive, userSourceId: us.id })),
     });
   }
 
   return NextResponse.json({
     sources: userSources.map((us) => ({
       ...us.source,
+      articleCount: us.source._count.articles,
       priority: us.priority,
       isActive: us.isActive,
       userSourceId: us.id,
