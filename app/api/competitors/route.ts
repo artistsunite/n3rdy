@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
+import { getCompetitorScanQueue } from '@/lib/queue';
 
 export async function GET() {
   const session = await auth();
@@ -34,6 +35,16 @@ export async function POST(req: NextRequest) {
       description: body.description || null,
     },
   });
+
+  // Auto-kick off initial scan if any URLs were provided
+  if (body.website || body.pricingUrl || body.blogUrl || body.productUrl) {
+    try {
+      const queue = getCompetitorScanQueue();
+      await queue.add('scan', { competitorId: competitor.id, userId: session.user.id }, { jobId: `scan-${competitor.id}-init` });
+    } catch {
+      // Non-fatal — user can trigger scan manually
+    }
+  }
 
   return NextResponse.json({ competitor }, { status: 201 });
 }

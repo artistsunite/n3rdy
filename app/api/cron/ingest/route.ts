@@ -72,5 +72,51 @@ export async function GET(req: Request) {
     }
   } catch { /* non-fatal */ }
 
-  return NextResponse.json({ ok: true, enqueued, sourceCount: sources.length, predictionsValidated, competitorScansEnqueued, opportunitiesGenerated });
+  // Detect competitor news mentions in recently ingested articles
+  let newsMentionsCreated = 0;
+  try {
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const allCompetitors = await db.competitor.findMany({
+      where: { isActive: true },
+      select: { id: true, userId: true, name: true },
+    });
+    const recentArticles = await db.article.findMany({
+      where: { publishedAt: { gte: oneDayAgo } },
+      include: { analysis: { select: { shortSummary: true, marketImpactScore: true } } },
+      orderBy: { publishedAt: 'desc' },
+      take: 200,
+    });
+
+    for (const competitor of allCompetitors) {
+      const nameLower = competitor.name.toLowerCase();
+      for (const article of recentArticles) {
+        const titleLower = article.title.toLowerCase();
+        const summaryLower = (article.analysis?.shortSummary ?? '').toLowerCase();
+        if (!titleLower.includes(nameLower) && !summaryLower.includes(nameLower)) continue;
+
+        // Skip if we already have a news_mention event for this article URL
+        const existing = await db.competitorEvent.findFirst({
+          where: { competitorId: competitor.id, sourceUrl: article.url, eventType: 'news_mention' },
+        });
+        if (existing) continue;
+
+        const impact = article.analysis?.marketImpactScore ?? 0;
+        await db.competitorEvent.create({
+          data: {
+            competitorId: competitor.id,
+            userId: competitor.userId,
+            eventType: 'news_mention',
+            title: `News mention: ${article.title.slice(0, 100)}`,
+            description: article.analysis?.shortSummary ?? article.title,
+            sourceUrl: article.url,
+            aiSummary: article.analysis?.shortSummary ?? 'Article mentions this competitor.',
+            importance: impact > 0.7 ? 'high' : impact > 0.4 ? 'medium' : 'low',
+          },
+        });
+        newsMentionsCreated++;
+      }
+    }
+  } catch { /* non-fatal */ }
+
+  return NextResponse.json({ ok: true, enqueued, sourceCount: sources.length, predictionsValidated, competitorScansEnqueued, opportunitiesGenerated, newsMentionsCreated });
 }
