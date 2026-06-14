@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Plus, Trash2, Star, Sparkles, X, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Star, Sparkles, X, Loader2, ExternalLink, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
 
 interface WatchlistItem {
   id: string;
@@ -9,6 +10,15 @@ interface WatchlistItem {
   value: string;
   label: string;
   priority: number;
+}
+
+interface ArticleResult {
+  id: string;
+  title: string;
+  url: string;
+  publishedAt: string;
+  source: { name: string };
+  analysis: { sentiment: string; marketImpactScore: number; shortSummary?: string } | null;
 }
 
 interface WatchlistSuggestion {
@@ -43,6 +53,23 @@ export default function WatchlistPanel() {
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [addingId, setAddingId] = useState<string | null>(null);
+  const [selectedItem, setSelectedItem] = useState<WatchlistItem | null>(null);
+  const [articleResults, setArticleResults] = useState<ArticleResult[]>([]);
+  const [loadingArticles, setLoadingArticles] = useState(false);
+
+  const exploreItem = async (item: WatchlistItem) => {
+    if (selectedItem?.id === item.id) { setSelectedItem(null); return; }
+    setSelectedItem(item);
+    setArticleResults([]);
+    setLoadingArticles(true);
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(item.value)}`);
+      const d = await res.json() as { articles: ArticleResult[] };
+      setArticleResults(d.articles ?? []);
+    } finally {
+      setLoadingArticles(false);
+    }
+  };
 
   useEffect(() => {
     fetch('/api/watchlist')
@@ -213,25 +240,95 @@ export default function WatchlistPanel() {
               <div className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2">{type}S</div>
               <div className="flex flex-wrap gap-2">
                 {grouped[type].map((item) => (
-                  <div
+                  <button
                     key={item.id}
-                    className="inline-flex items-center gap-2 liquid-glass-card rounded-full px-3 py-1.5 group"
+                    onClick={() => exploreItem(item)}
+                    className={`inline-flex items-center gap-2 liquid-glass-card rounded-full px-3 py-1.5 group transition-all ${selectedItem?.id === item.id ? 'ring-1 ring-n3-primary/40 bg-n3-primary/5' : 'hover:ring-1 hover:ring-white/10'}`}
                   >
                     <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${TYPE_COLORS[item.type] ?? ''}`}>
                       {item.type.charAt(0)}
                     </span>
                     <span className="text-sm text-white">{item.label}</span>
-                    <button
-                      onClick={() => removeItem(item.id)}
-                      className="text-white/30 hover:text-n3-danger opacity-0 group-hover:opacity-100 transition-all ml-1"
+                    <span
+                      onClick={(e) => { e.stopPropagation(); removeItem(item.id); }}
+                      className="text-white/30 hover:text-n3-danger opacity-0 group-hover:opacity-100 transition-all ml-1 cursor-pointer"
                     >
                       <Trash2 size={12} />
-                    </button>
-                  </div>
+                    </span>
+                  </button>
                 ))}
               </div>
             </div>
           ))}
+
+          {/* Article explorer for selected watchlist item */}
+          {selectedItem && (
+            <div className="liquid-glass-card rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${TYPE_COLORS[selectedItem.type] ?? 'text-white/50 bg-white/5'}`}>
+                    {selectedItem.type.charAt(0)}
+                  </span>
+                  <span className="text-sm font-semibold text-white">{selectedItem.label}</span>
+                  <span className="text-xs text-white/40">— recent news</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href={`/dashboard/news?search=${encodeURIComponent(selectedItem.value)}`}
+                    className="flex items-center gap-1 text-xs text-n3-primary/70 hover:text-n3-primary transition-colors"
+                  >
+                    All results <ChevronRight size={11} />
+                  </Link>
+                  <button onClick={() => setSelectedItem(null)} className="text-white/30 hover:text-white/60">
+                    <X size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {loadingArticles ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map(i => <div key={i} className="h-8 bg-white/5 rounded-lg animate-pulse" />)}
+                </div>
+              ) : articleResults.length === 0 ? (
+                <p className="text-xs text-white/40 py-2">No recent articles matching &ldquo;{selectedItem.value}&rdquo;</p>
+              ) : (
+                <div className="space-y-2">
+                  {articleResults.slice(0, 5).map(a => {
+                    const timeAgo = (() => {
+                      const diff = Date.now() - new Date(a.publishedAt).getTime();
+                      const h = Math.floor(diff / 3600000);
+                      return h > 0 ? `${h}h ago` : `${Math.floor(diff / 60000)}m ago`;
+                    })();
+                    return (
+                      <a
+                        key={a.id}
+                        href={a.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-start gap-2 group/art p-2 rounded-xl hover:bg-white/5 transition-colors"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs text-white/40 mb-0.5">{a.source.name} · {timeAgo}</div>
+                          <div className="text-sm text-white/80 group-hover/art:text-white line-clamp-1 transition-colors">{a.title}</div>
+                          {a.analysis?.shortSummary && (
+                            <div className="text-xs text-white/40 mt-0.5 line-clamp-1">{a.analysis.shortSummary}</div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0 mt-0.5">
+                          {a.analysis?.sentiment && (
+                            <span className={`text-xs px-1.5 py-0.5 rounded-full ${a.analysis.sentiment === 'positive' ? 'bg-n3-success/10 text-n3-success' : a.analysis.sentiment === 'negative' ? 'bg-n3-danger/10 text-n3-danger' : 'bg-white/5 text-white/30'}`}>
+                              {a.analysis.sentiment}
+                            </span>
+                          )}
+                          <ExternalLink size={10} className="text-white/20 group-hover/art:text-white/50 transition-colors" />
+                        </div>
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
