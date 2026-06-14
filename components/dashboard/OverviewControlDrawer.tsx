@@ -57,6 +57,7 @@ function SectionHeader({ label, open, onToggle }: { label: string; open: boolean
 
 const CATEGORIES = ['markets', 'crypto', 'technology', 'macro', 'geopolitics'];
 const WIDGETS = [
+  { key: 'growth', label: 'Growth Intelligence' },
   { key: 'watchlist', label: 'Watchlist Activity' },
   { key: 'marketing', label: 'Marketing Calendar' },
   { key: 'trending', label: 'Trending Post' },
