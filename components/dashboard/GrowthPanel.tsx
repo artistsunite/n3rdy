@@ -148,8 +148,10 @@ export default function GrowthPanel() {
   }, [resultInputs]);
 
   const activeOpps = opportunities.filter(o => o.status !== 'dismissed');
+  const newOpps = activeOpps.filter(o => o.status === 'new').length;
   const highImpact = opportunities.filter(o => o.impactScore >= 0.7 && o.status !== 'dismissed').length;
   const runningExps = experiments.filter(e => e.status === 'running').length;
+  const pendingExps = experiments.filter(e => e.status === 'pending').length;
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -176,17 +178,18 @@ export default function GrowthPanel() {
 
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: 'Opportunities', value: activeOpps.length, icon: TrendingUp, color: 'text-cyan-400' },
-          { label: 'High Impact', value: highImpact, icon: Zap, color: 'text-green-400' },
-          { label: 'Running Experiments', value: runningExps, icon: FlaskConical, color: 'text-yellow-400' },
-        ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="liquid-glass-card rounded-2xl p-4">
+          { label: 'Opportunities', value: activeOpps.length, sub: newOpps > 0 ? `${newOpps} new` : 'total', icon: TrendingUp, color: 'text-cyan-400', onClick: () => setTab('opportunities') },
+          { label: 'High Impact', value: highImpact, sub: 'impact ≥ 70%', icon: Zap, color: 'text-green-400', onClick: () => setTab('opportunities') },
+          { label: 'Experiments', value: runningExps, sub: pendingExps > 0 ? `${pendingExps} pending` : 'running', icon: FlaskConical, color: 'text-yellow-400', onClick: () => setTab('experiments') },
+        ].map(({ label, value, sub, icon: Icon, color, onClick }) => (
+          <button key={label} onClick={onClick} className="liquid-glass-card rounded-2xl p-4 text-left hover:ring-1 hover:ring-white/10 transition-all">
             <div className="flex items-center gap-2 mb-2">
               <Icon size={16} className={color} />
               <span className="text-white/50 text-xs">{label}</span>
             </div>
             <div className={`text-2xl font-bold ${color}`}>{value}</div>
-          </div>
+            <div className="text-white/25 text-[10px] mt-0.5">{sub}</div>
+          </button>
         ))}
       </div>
 
