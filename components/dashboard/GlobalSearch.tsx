@@ -21,8 +21,14 @@ export default function GlobalSearch({ open, onClose }: Props) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResults | null>(null);
   const [loading, setLoading] = useState(false);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const itemRefs = useRef<(HTMLElement | null)[]>([]);
+
+  const totalItems = results
+    ? results.articles.length + results.opportunities.length + results.competitors.length + results.experiments.length
+    : 0;
 
   const search = useCallback(async (q: string) => {
     if (q.length < 2) { setResults(null); return; }
@@ -43,23 +49,61 @@ export default function GlobalSearch({ open, onClose }: Props) {
   }, [query, search]);
 
   useEffect(() => {
+    setFocusedIndex(-1);
+    itemRefs.current = [];
+  }, [results]);
+
+  useEffect(() => {
     if (open) {
       setQuery('');
       setResults(null);
+      setFocusedIndex(-1);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [open]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); onClose(); }
-      if (e.key === 'Escape') onClose();
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); onClose(); return; }
+      if (e.key === 'Escape') { onClose(); return; }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setFocusedIndex(i => {
+          const next = Math.min(i + 1, totalItems - 1);
+          itemRefs.current[next]?.scrollIntoView({ block: 'nearest' });
+          return next;
+        });
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setFocusedIndex(i => {
+          const next = Math.max(i - 1, -1);
+          if (next >= 0) itemRefs.current[next]?.scrollIntoView({ block: 'nearest' });
+          else inputRef.current?.focus();
+          return next;
+        });
+      }
+      if (e.key === 'Enter') {
+        setFocusedIndex(i => {
+          if (i >= 0) (itemRefs.current[i] as HTMLElement | null)?.click();
+          return i;
+        });
+      }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [onClose, totalItems]);
 
-  const total = results ? results.articles.length + results.opportunities.length + results.competitors.length + results.experiments.length : 0;
+  function rowClass(idx: number) {
+    return `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors group ${
+      idx === focusedIndex ? 'bg-white/10 ring-1 ring-n3-primary/30' : 'hover:bg-white/5'
+    }`;
+  }
+
+  const artStart = 0;
+  const oppStart = artStart + (results?.articles.length ?? 0);
+  const cmpStart = oppStart + (results?.opportunities.length ?? 0);
+  const expStart = cmpStart + (results?.competitors.length ?? 0);
 
   return (
     <AnimatePresence>
@@ -80,12 +124,12 @@ export default function GlobalSearch({ open, onClose }: Props) {
               <input
                 ref={inputRef}
                 value={query}
-                onChange={e => setQuery(e.target.value)}
+                onChange={e => { setQuery(e.target.value); setFocusedIndex(-1); }}
                 placeholder="Search articles, opportunities, competitors…"
                 className="flex-1 bg-transparent text-white text-sm outline-none placeholder-white/30"
               />
               {query && (
-                <button onClick={() => { setQuery(''); setResults(null); }} className="text-white/30 hover:text-white/60 transition-colors">
+                <button onClick={() => { setQuery(''); setResults(null); setFocusedIndex(-1); }} className="text-white/30 hover:text-white/60 transition-colors">
                   <X size={14} />
                 </button>
               )}
@@ -98,7 +142,7 @@ export default function GlobalSearch({ open, onClose }: Props) {
                 <p className="text-center text-white/30 text-sm py-8">Start typing to search across all your intelligence data</p>
               )}
 
-              {query && !loading && results && total === 0 && (
+              {query && !loading && results && totalItems === 0 && (
                 <p className="text-center text-white/30 text-sm py-8">No results for &ldquo;{query}&rdquo;</p>
               )}
 
@@ -107,16 +151,18 @@ export default function GlobalSearch({ open, onClose }: Props) {
                   <div className="flex items-center gap-2 px-3 py-1.5 text-white/30 text-[10px] font-semibold uppercase tracking-widest">
                     <Newspaper size={10} /> Articles
                   </div>
-                  {results.articles.map(a => (
+                  {results.articles.map((a, i) => (
                     <a key={a.id} href={a.url} target="_blank" rel="noopener noreferrer"
-                      className="flex items-start gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors group"
+                      ref={el => { itemRefs.current[artStart + i] = el; }}
+                      className={rowClass(artStart + i)}
+                      onMouseEnter={() => setFocusedIndex(artStart + i)}
                       onClick={onClose}>
-                      <Newspaper size={13} className="text-white/30 mt-0.5 flex-shrink-0" />
+                      <Newspaper size={13} className="text-white/30 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-white/80 group-hover:text-white line-clamp-1 transition-colors">{a.title}</p>
                         <p className="text-[10px] text-white/30">{a.source.name}</p>
                       </div>
-                      <ArrowRight size={12} className="text-white/20 group-hover:text-white/50 mt-1 flex-shrink-0 transition-colors" />
+                      <ArrowRight size={12} className="text-white/20 group-hover:text-white/50 flex-shrink-0 transition-colors" />
                     </a>
                   ))}
                 </div>
@@ -127,9 +173,12 @@ export default function GlobalSearch({ open, onClose }: Props) {
                   <div className="flex items-center gap-2 px-3 py-1.5 text-white/30 text-[10px] font-semibold uppercase tracking-widest">
                     <Zap size={10} /> Growth Opportunities
                   </div>
-                  {results.opportunities.map(o => (
-                    <Link key={o.id} href="/dashboard/growth" onClick={onClose}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors group">
+                  {results.opportunities.map((o, i) => (
+                    <Link key={o.id} href="/dashboard/growth"
+                      ref={el => { itemRefs.current[oppStart + i] = el; }}
+                      className={rowClass(oppStart + i)}
+                      onMouseEnter={() => setFocusedIndex(oppStart + i)}
+                      onClick={onClose}>
                       <Zap size={13} className="text-cyan-400/50 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-white/80 group-hover:text-white line-clamp-1 transition-colors">{o.title}</p>
@@ -146,9 +195,12 @@ export default function GlobalSearch({ open, onClose }: Props) {
                   <div className="flex items-center gap-2 px-3 py-1.5 text-white/30 text-[10px] font-semibold uppercase tracking-widest">
                     <Crosshair size={10} /> Competitors
                   </div>
-                  {results.competitors.map(c => (
-                    <Link key={c.id} href="/dashboard/competitors" onClick={onClose}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors group">
+                  {results.competitors.map((c, i) => (
+                    <Link key={c.id} href="/dashboard/competitors"
+                      ref={el => { itemRefs.current[cmpStart + i] = el; }}
+                      className={rowClass(cmpStart + i)}
+                      onMouseEnter={() => setFocusedIndex(cmpStart + i)}
+                      onClick={onClose}>
                       <Crosshair size={13} className="text-red-400/50 flex-shrink-0" />
                       <span className="flex-1 text-sm text-white/80 group-hover:text-white transition-colors">{c.name}</span>
                       {(c._count?.events ?? 0) > 0 && (
@@ -165,9 +217,12 @@ export default function GlobalSearch({ open, onClose }: Props) {
                   <div className="flex items-center gap-2 px-3 py-1.5 text-white/30 text-[10px] font-semibold uppercase tracking-widest">
                     <FlaskConical size={10} /> Experiments
                   </div>
-                  {results.experiments.map(e => (
-                    <Link key={e.id} href="/dashboard/growth" onClick={onClose}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors group">
+                  {results.experiments.map((e, i) => (
+                    <Link key={e.id} href="/dashboard/growth"
+                      ref={el => { itemRefs.current[expStart + i] = el; }}
+                      className={rowClass(expStart + i)}
+                      onMouseEnter={() => setFocusedIndex(expStart + i)}
+                      onClick={onClose}>
                       <FlaskConical size={13} className="text-purple-400/50 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-white/80 group-hover:text-white line-clamp-1 transition-colors">{e.hypothesis}</p>
@@ -181,6 +236,7 @@ export default function GlobalSearch({ open, onClose }: Props) {
             </div>
 
             <div className="px-4 py-2 border-t border-white/5 flex items-center gap-3 text-[10px] text-white/20">
+              <span><kbd className="font-mono">↑↓</kbd> navigate</span>
               <span><kbd className="font-mono">↵</kbd> open</span>
               <span><kbd className="font-mono">⌘K</kbd> close</span>
               <span><kbd className="font-mono">Esc</kbd> close</span>

@@ -469,12 +469,18 @@ export default function AdvisorPanel() {
                     )}
                     <textarea
                       ref={inputRef}
-                      className="flex-1 bg-transparent text-white text-sm outline-none placeholder-white/25 resize-none max-h-32 min-h-[36px] leading-relaxed"
+                      className="flex-1 bg-transparent text-white text-sm outline-none placeholder-white/25 resize-none max-h-32 min-h-[36px] leading-relaxed overflow-y-auto"
                       placeholder="Ask your advisor anything… (Enter to send, Shift+Enter for newline)"
                       value={input}
-                      onChange={e => setInput(e.target.value)}
+                      onChange={e => {
+                        setInput(e.target.value);
+                        const ta = e.target;
+                        ta.style.height = 'auto';
+                        ta.style.height = `${Math.min(ta.scrollHeight, 128)}px`;
+                      }}
                       onKeyDown={handleKeyDown}
                       rows={1}
+                      style={{ height: '36px' }}
                     />
                     <button
                       onClick={sendMessage}
