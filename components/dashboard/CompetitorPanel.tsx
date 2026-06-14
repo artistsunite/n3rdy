@@ -59,13 +59,29 @@ export default function CompetitorPanel() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    // Refresh competitor unread counts every 5 minutes
+    const interval = setInterval(() => {
+      fetch('/api/competitors').then(r => r.json()).then((d: { competitors: Competitor[] }) => {
+        setCompetitors(prev => prev.map(c => {
+          const fresh = d.competitors.find(f => f.id === c.id);
+          return fresh ? { ...c, _count: fresh._count } : c;
+        }));
+      }).catch(() => null);
+    }, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [load]);
 
   const selectCompetitor = useCallback(async (c: Competitor) => {
     setSelected(c);
     const r = await fetch(`/api/competitors/${c.id}/events`);
     const d = await r.json() as { events: CompetitorEvent[] };
     setEvents(d.events);
+    // Clear the unread badge on the list item after events are marked read
+    setCompetitors(prev => prev.map(comp =>
+      comp.id === c.id ? { ...comp, _count: { events: 0 } } : comp
+    ));
   }, []);
 
   const addCompetitor = useCallback(async () => {
