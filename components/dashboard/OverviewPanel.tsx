@@ -81,6 +81,7 @@ export default function OverviewPanel({ userName }: { userName?: string | null }
     const params = new URLSearchParams({ limit: '6' });
     if (active.minImpact > 0) params.set('minImpact', String(active.minImpact));
     if (active.riskLevel !== 'all') params.set('riskLevel', active.riskLevel);
+    if (active.category && active.category !== 'all') params.set('category', active.category);
     const [s, a] = await Promise.all([
       fetch(`/api/sentiment?period=${active.timeWindow}`).then(r => r.json()),
       fetch(`/api/articles?${params}`).then(r => r.json()),
