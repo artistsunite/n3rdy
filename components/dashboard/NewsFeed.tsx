@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Search, Filter } from 'lucide-react';
 import ArticleCard from './ArticleCard';
 
@@ -26,6 +27,7 @@ interface Article {
 const SENTIMENTS = ['all', 'positive', 'negative', 'neutral'];
 
 export default function NewsFeed() {
+  const searchParams = useSearchParams();
   const [articles, setArticles] = useState<Article[]>([]);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
@@ -33,7 +35,7 @@ export default function NewsFeed() {
   const [sentiment, setSentiment] = useState('all');
   const [minImpact, setMinImpact] = useState(0);
   const [category, setCategory] = useState('all');
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(() => searchParams.get('search') ?? '');
 
   const load = useCallback(async (reset = false) => {
     setLoading(true);
