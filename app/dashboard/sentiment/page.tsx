@@ -22,16 +22,20 @@ interface SentimentData {
   timeSeries: Array<{ time: string; avgScore: number; count: number }>;
 }
 
+type Period = '24h' | '7d' | '30d';
+
 export default function SentimentPage() {
   const { data: session } = useSession();
   const [data, setData] = useState<SentimentData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState<Period>('24h');
 
   useEffect(() => {
-    fetch('/api/sentiment')
+    setLoading(true);
+    fetch(`/api/sentiment?period=${period}`)
       .then((r) => r.json())
       .then((d) => { setData(d); setLoading(false); });
-  }, []);
+  }, [period]);
 
   const chartData = (data?.byCategory ?? []).map((c) => ({
     category: c.category,
@@ -40,20 +44,39 @@ export default function SentimentPage() {
   }));
 
   const timeData = (data?.timeSeries ?? []).map((d) => ({
-    time: new Date(d.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    time: period === '24h'
+      ? new Date(d.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : new Date(d.time).toLocaleDateString([], { month: 'short', day: 'numeric' }),
     score: parseFloat(d.avgScore.toFixed(3)),
     count: d.count,
   }));
 
+  const PERIOD_LABELS: Record<Period, string> = { '24h': 'last 24h', '7d': 'last 7 days', '30d': 'last 30 days' };
+
   return (
     <DashboardShell userName={session?.user?.name} userImage={session?.user?.image}>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Sentiment Analysis</h1>
-          <p className="text-white/50 text-sm mt-1">Aggregated sentiment across your monitored sources — last 24h</p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-white">Sentiment Analysis</h1>
+            <p className="text-white/50 text-sm mt-1">Aggregated sentiment across your monitored sources — {PERIOD_LABELS[period]}</p>
+          </div>
+          <div className="flex gap-1 liquid-glass-card rounded-lg p-1">
+            {(['24h', '7d', '30d'] as Period[]).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                  period === p ? 'bg-n3-primary/10 text-n3-primary' : 'text-white/50 hover:text-white'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {loading ? (
+        {loading && !data ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="h-64 liquid-glass-card rounded-xl animate-pulse" />
             <div className="h-64 liquid-glass-card rounded-xl animate-pulse" />
@@ -98,7 +121,7 @@ export default function SentimentPage() {
             {/* Time series */}
             {timeData.length > 0 && (
               <div className="liquid-glass-card rounded-xl p-5">
-                <div className="text-sm font-semibold text-white mb-4">Sentiment Over Time (24h)</div>
+                <div className="text-sm font-semibold text-white mb-4">Sentiment Over Time ({period})</div>
                 <ResponsiveContainer width="100%" height={200}>
                   <LineChart data={timeData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
