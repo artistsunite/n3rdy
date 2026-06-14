@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { Building2, Save, CheckCircle, ChevronRight, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Building2, Save, CheckCircle, ChevronRight, X, Wand2 } from 'lucide-react';
+import IndustryTemplateWizard from '@/components/dashboard/IndustryTemplateWizard';
 
 interface BusinessProfile {
   id?: string;
@@ -77,13 +78,16 @@ export default function BusinessProfilePanel() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showWizard, setShowWizard] = useState(false);
 
-  useEffect(() => {
+  const loadProfile = useCallback(() => {
     fetch('/api/business-profile')
       .then(r => r.json())
       .then(d => { if (d.profile) setProfile({ ...d.profile, products: d.profile.products ?? [], services: d.profile.services ?? [], marketRegions: d.profile.marketRegions ?? [], priorityTopics: d.profile.priorityTopics ?? [], keywords: d.profile.keywords ?? [] }); })
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { loadProfile(); }, [loadProfile]);
 
   const save = useCallback(async () => {
     setSaving(true);
@@ -124,6 +128,13 @@ export default function BusinessProfilePanel() {
             </div>
           </div>
           <button
+            onClick={() => setShowWizard(true)}
+            className="flex items-center gap-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-purple-300 px-3 py-2 rounded-xl text-sm font-medium transition-all"
+          >
+            <Wand2 size={14} />
+            Template
+          </button>
+          <button
             onClick={save}
             disabled={saving}
             className="flex items-center gap-2 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 text-cyan-300 px-4 py-2 rounded-xl text-sm font-medium transition-all"
@@ -145,6 +156,27 @@ export default function BusinessProfilePanel() {
           </button>
         ))}
       </div>
+
+      {!profile.businessType && !profile.businessName && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="liquid-glass rounded-xl p-4 flex items-center gap-4 border border-purple-500/20"
+        >
+          <div className="text-3xl">🚀</div>
+          <div className="flex-1">
+            <p className="text-white text-sm font-medium">New here? Use an industry template to get started fast.</p>
+            <p className="text-white/50 text-xs mt-0.5">Pre-fills your profile, watchlist keywords, and news sources in one click.</p>
+          </div>
+          <button
+            onClick={() => setShowWizard(true)}
+            className="flex items-center gap-2 bg-purple-500/30 hover:bg-purple-500/40 border border-purple-500/40 text-purple-200 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap"
+          >
+            <Wand2 size={14} />
+            Choose Template
+          </button>
+        </motion.div>
+      )}
 
       {activeTab === 'info' && (
         <div className="grid grid-cols-2 gap-4">
@@ -238,6 +270,15 @@ export default function BusinessProfilePanel() {
           )}
         </div>
       )}
+
+      <AnimatePresence>
+        {showWizard && (
+          <IndustryTemplateWizard
+            onClose={() => setShowWizard(false)}
+            onApplied={() => { setLoading(true); loadProfile(); }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
