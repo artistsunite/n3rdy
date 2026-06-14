@@ -35,7 +35,7 @@ export default function TrendingPanel() {
         ));
       }
       setLoading(false);
-    });
+    }).catch(() => setLoading(false));
   }, [period]);
 
   const categories = useMemo(() => {

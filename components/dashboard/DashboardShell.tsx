@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import GlobalSearch from '@/components/dashboard/GlobalSearch';
 import NotificationPanel from '@/components/dashboard/NotificationPanel';
+import PanelErrorBoundary from '@/components/dashboard/PanelErrorBoundary';
 import {
   LayoutDashboard,
   Newspaper,
@@ -219,7 +220,7 @@ export default function DashboardShell({ children, userName, userImage }: Props)
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-6"><PanelErrorBoundary>{children}</PanelErrorBoundary></main>
       </div>
 
       <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
