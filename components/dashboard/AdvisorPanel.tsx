@@ -378,9 +378,9 @@ export default function AdvisorPanel() {
 
         {view === 'chat' && (
           <motion.div key="chat" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <div className="flex gap-4 h-[600px]">
+            <div className="flex flex-col lg:flex-row gap-4 lg:h-[600px]">
               {/* Conversation list */}
-              <div className="w-56 flex-shrink-0 flex flex-col gap-2">
+              <div className="lg:w-56 flex-shrink-0 flex flex-row lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-1 lg:pb-0">
                 <button onClick={newConversation}
                   className="flex items-center gap-2 w-full liquid-glass hover:bg-white/5 border border-white/10 hover:border-cyan-500/30 text-white/60 hover:text-cyan-300 px-3 py-2.5 rounded-xl text-sm font-medium transition-all">
                   <Plus size={14} /> New Chat
@@ -405,7 +405,7 @@ export default function AdvisorPanel() {
               </div>
 
               {/* Chat area */}
-              <div className="flex-1 flex flex-col liquid-glass-card rounded-2xl overflow-hidden">
+              <div className="flex-1 flex flex-col liquid-glass-card rounded-2xl overflow-hidden min-h-[460px] lg:min-h-0">
                 {loadingConv ? (
                   <div className="flex-1 flex items-center justify-center">
                     <Loader2 size={20} className="animate-spin text-cyan-400/50" />

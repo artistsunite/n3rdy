@@ -197,7 +197,14 @@ export default function BriefingsPanel() {
       {error && (
         <div className="flex items-start gap-3 bg-n3-danger/10 border border-n3-danger/20 rounded-xl px-4 py-3">
           <AlertCircle size={16} className="text-n3-danger mt-0.5 flex-shrink-0" />
-          <p className="text-sm text-n3-danger">{error}</p>
+          <p className="text-sm text-n3-danger">
+            {error}
+            {error.toLowerCase().includes('source') && (
+              <Link href="/dashboard/sources" className="ml-2 underline text-red-300 hover:text-red-200 transition-colors">
+                Set up Sources →
+              </Link>
+            )}
+          </p>
         </div>
       )}
 

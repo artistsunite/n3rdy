@@ -224,8 +224,8 @@ export default function CompetitorPanel() {
           <p className="text-white/30 text-xs mt-1">Add a competitor to start tracking their changes.</p>
         </div>
       ) : (
-        <div className="flex gap-4">
-          <div className="w-72 flex-shrink-0 space-y-2">
+        <div className="flex flex-col lg:flex-row gap-4">
+          <div className="lg:w-72 flex-shrink-0 space-y-2">
             {competitors.map(c => (
               <motion.button
                 key={c.id}

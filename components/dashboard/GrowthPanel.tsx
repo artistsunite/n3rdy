@@ -385,7 +385,7 @@ export default function GrowthPanel() {
               <div className="liquid-glass-card rounded-2xl p-8 text-center">
                 <FlaskConical className="mx-auto mb-3 text-white/20" size={32} />
                 <p className="text-white/40 text-sm">No experiments yet.</p>
-                <p className="text-white/25 text-xs mt-1">Generate opportunities first, then click &quot;Generate Experiments&quot;.</p>
+                <p className="text-white/25 text-xs mt-1">{activeOpps.length > 0 ? 'Click "Generate Experiments" above to design testable growth experiments.' : 'Generate opportunities first, then click "Generate Experiments".'}</p>
               </div>
             ) : (
               experiments.map(exp => (
