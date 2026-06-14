@@ -121,6 +121,27 @@ export async function POST(req: NextRequest) {
     })) as typeof articles;
   }
 
+  // Boost watchlist-matching articles: fetch watchlist and score articles
+  const watchlistItems = await db.watchlistItem.findMany({
+    where: { userId: uid },
+    select: { value: true, type: true, priority: true },
+  }).catch(() => [] as { value: string; type: string; priority: number }[]);
+
+  if (watchlistItems.length > 0) {
+    const watchTerms = watchlistItems
+      .filter(w => ['KEYWORD', 'COMPANY', 'PERSON', 'SECTOR'].includes(w.type))
+      .map(w => w.value.toLowerCase());
+
+    articles = articles
+      .map(a => {
+        const haystack = `${a.title} ${a.analysis?.shortSummary ?? ''}`.toLowerCase();
+        const matchCount = watchTerms.filter(t => haystack.includes(t)).length;
+        return { article: a, score: matchCount * 2 + (a.analysis?.marketImpactScore ?? 0) };
+      })
+      .sort((a, b) => b.score - a.score)
+      .map(({ article }) => article);
+  }
+
   const [preferences, businessProfile, recentCompetitorEvents, topOpportunities] = await Promise.all([
     db.userPreferences.findUnique({ where: { userId: uid } }).catch(() => null),
     db.businessProfile.findUnique({ where: { userId: uid } }).catch(() => null),
