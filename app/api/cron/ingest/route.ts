@@ -95,6 +95,33 @@ export async function GET(req: Request) {
     }
   } catch { /* non-fatal */ }
 
+  // Auto-send email briefings for users who have enabled scheduled delivery
+  let briefingEmailsSent = 0;
+  try {
+    const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
+    const rawSecret = process.env.CRON_SECRET ?? '';
+    const secret = (rawSecret.charCodeAt(0) === 0xFEFF ? rawSecret.slice(1) : rawSecret).trim();
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+    const usersWithEmail = await db.userPreferences.findMany({
+      where: { emailBriefingEnabled: true },
+      select: { userId: true, emailBriefingFrequency: true, alertThresholds: true },
+    });
+    for (const pref of usersWithEmail) {
+      // Skip weekends if frequency is weekdays
+      const dayOfWeek = new Date().getDay();
+      if (pref.emailBriefingFrequency === 'weekdays' && (dayOfWeek === 0 || dayOfWeek === 6)) continue;
+      // Check if already sent today
+      const thresholds = (pref.alertThresholds as Record<string, unknown> | null) ?? {};
+      const lastSent = thresholds.lastBriefingEmailSentAt as string | undefined;
+      if (lastSent && new Date(lastSent) >= todayStart) continue;
+      const r = await fetch(`${baseUrl}/api/briefings/email`, {
+        method: 'POST',
+        headers: { 'x-cron-user-id': pref.userId, 'x-cron-secret': secret },
+      });
+      if (r.ok) briefingEmailsSent++;
+    }
+  } catch { /* non-fatal */ }
+
   // Detect competitor news mentions in recently ingested articles
   let newsMentionsCreated = 0;
   try {
@@ -141,5 +168,5 @@ export async function GET(req: Request) {
     }
   } catch { /* non-fatal */ }
 
-  return NextResponse.json({ ok: true, enqueued, sourceCount: sources.length, predictionsValidated, competitorScansEnqueued, opportunitiesGenerated, reportsGenerated, newsMentionsCreated });
+  return NextResponse.json({ ok: true, enqueued, sourceCount: sources.length, predictionsValidated, competitorScansEnqueued, opportunitiesGenerated, reportsGenerated, briefingEmailsSent, newsMentionsCreated });
 }

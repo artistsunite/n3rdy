@@ -1,15 +1,31 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { sendBriefingEmail } from '@/lib/email';
 
-export async function POST() {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export async function POST(req: NextRequest) {
+  // Support cron-triggered emails with x-cron-user-id header
+  const cronUserId = req.headers.get('x-cron-user-id');
+  const cronSecret = req.headers.get('x-cron-secret');
+  const isCron = cronUserId && cronSecret === process.env.CRON_SECRET;
 
-  const userId = session.user.id;
-  const toEmail = session.user.email;
-  const toName = session.user.name ?? '';
+  let userId: string;
+  let toEmail: string;
+  let toName: string;
+
+  if (isCron) {
+    userId = cronUserId;
+    const user = await db.user.findUnique({ where: { id: userId }, select: { email: true, name: true } });
+    if (!user?.email) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    toEmail = user.email;
+    toName = user.name ?? '';
+  } else {
+    const session = await auth();
+    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    userId = session.user.id;
+    toEmail = session.user.email ?? '';
+    toName = session.user.name ?? '';
+  }
 
   if (!toEmail) return NextResponse.json({ error: 'No email on account' }, { status: 400 });
 
@@ -49,6 +65,18 @@ export async function POST() {
       briefing: briefing.content as unknown as Parameters<typeof sendBriefingEmail>[0]['briefing'],
       growth: { opportunities, competitorEvents },
     });
+
+    // Update lastBriefingEmailSentAt in alertThresholds for cron dedup
+    if (isCron) {
+      const prefs = await db.userPreferences.findUnique({ where: { userId } });
+      const thresholds = (prefs?.alertThresholds as Record<string, unknown> | null) ?? {};
+      await db.userPreferences.upsert({
+        where: { userId },
+        create: { userId, alertThresholds: { ...thresholds, lastBriefingEmailSentAt: new Date().toISOString() } },
+        update: { alertThresholds: { ...thresholds, lastBriefingEmailSentAt: new Date().toISOString() } },
+      });
+    }
+
     return NextResponse.json({ ok: true, sentTo: toEmail });
   } catch (err) {
     const msg = (err as Error).message ?? 'Email send failed';

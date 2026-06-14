@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Check, Loader2 } from 'lucide-react';
+import { Check, Loader2, Mail } from 'lucide-react';
 
 interface Props {
   userName?: string | null;
@@ -30,15 +30,24 @@ export default function SettingsClient({ userName, userEmail, userImage }: Props
   const [savedOk, setSavedOk] = useState(false);
   const [googleStatus, setGoogleStatus] = useState<GoogleStatus | null>(null);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [emailEnabled, setEmailEnabled] = useState(false);
+  const [emailFrequency, setEmailFrequency] = useState<'daily' | 'weekdays'>('daily');
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [emailSavedOk, setEmailSavedOk] = useState(false);
+  const [testingEmail, setTestingEmail] = useState(false);
+  const [testEmailResult, setTestEmailResult] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
       fetch('/api/settings/preferences').then(r => r.json()),
       fetch('/api/google/status').then(r => r.json()),
     ]).then(([prefsResp, gs]) => {
-      const c = (prefsResp.preferences?.country ?? prefsResp.country ?? '');
+      const prefs = prefsResp.preferences ?? {};
+      const c = prefs.country ?? '';
       setCountry(c);
       setSavedCountry(c);
+      setEmailEnabled(prefs.emailBriefingEnabled ?? false);
+      setEmailFrequency(prefs.emailBriefingFrequency === 'weekdays' ? 'weekdays' : 'daily');
       setGoogleStatus(gs as GoogleStatus);
     }).catch(() => null);
   }, []);
@@ -58,6 +67,32 @@ export default function SettingsClient({ userName, userEmail, userImage }: Props
       }
     } finally {
       setSavingCountry(false);
+    }
+  }
+
+  async function saveEmailPrefs() {
+    setSavingEmail(true);
+    try {
+      const res = await fetch('/api/settings/preferences', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emailBriefingEnabled: emailEnabled, emailBriefingFrequency: emailFrequency }),
+      });
+      if (res.ok) { setEmailSavedOk(true); setTimeout(() => setEmailSavedOk(false), 2000); }
+    } finally {
+      setSavingEmail(false);
+    }
+  }
+
+  async function sendTestEmail() {
+    setTestingEmail(true);
+    setTestEmailResult(null);
+    try {
+      const res = await fetch('/api/briefings/email', { method: 'POST' });
+      const data = await res.json();
+      setTestEmailResult(res.ok ? `Sent to ${data.sentTo}` : (data.error ?? 'Send failed'));
+    } finally {
+      setTestingEmail(false);
     }
   }
 
@@ -126,6 +161,69 @@ export default function SettingsClient({ userName, userEmail, userImage }: Props
           </button>
           {country !== savedCountry && (
             <span className="text-xs text-white/40">Unsaved changes</span>
+          )}
+        </div>
+      </div>
+
+      {/* Email Briefings */}
+      <div className="liquid-glass-card rounded-2xl p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <Mail size={15} className="text-n3-primary" />
+          <p className="text-sm font-semibold text-white">Email Briefings</p>
+        </div>
+        <p className="text-xs text-white/50">Receive your daily intelligence briefing by email. We&apos;ll send it automatically each morning.</p>
+
+        <div className="flex items-center justify-between p-3 bg-white/3 rounded-xl">
+          <div>
+            <p className="text-sm text-white font-medium">Daily email briefing</p>
+            <p className="text-xs text-white/40 mt-0.5">Includes top stories, growth signals &amp; competitor updates</p>
+          </div>
+          <button
+            onClick={() => setEmailEnabled(e => !e)}
+            className={`relative w-11 h-6 rounded-full transition-colors ${emailEnabled ? 'bg-n3-primary' : 'bg-white/10'}`}
+          >
+            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${emailEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+          </button>
+        </div>
+
+        {emailEnabled && (
+          <div className="space-y-2">
+            <p className="text-xs text-white/40 font-medium uppercase tracking-wider">Frequency</p>
+            <div className="flex gap-2">
+              {(['daily', 'weekdays'] as const).map(freq => (
+                <button
+                  key={freq}
+                  onClick={() => setEmailFrequency(freq)}
+                  className={`px-3 py-1.5 rounded-xl text-xs border transition-all ${emailFrequency === freq ? 'bg-n3-primary/20 border-n3-primary/40 text-n3-primary' : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10'}`}
+                >
+                  {freq === 'daily' ? 'Every day' : 'Weekdays only'}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            onClick={saveEmailPrefs}
+            disabled={savingEmail}
+            className="flex items-center gap-2 px-4 py-2 bg-n3-primary text-n3-bg rounded-xl text-sm font-semibold hover:bg-n3-primary/90 disabled:opacity-50 transition-colors"
+          >
+            {savingEmail ? <Loader2 size={13} className="animate-spin" /> : emailSavedOk ? <Check size={13} /> : null}
+            {emailSavedOk ? 'Saved!' : 'Save'}
+          </button>
+          <button
+            onClick={sendTestEmail}
+            disabled={testingEmail}
+            className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white rounded-xl text-sm transition-all disabled:opacity-50"
+          >
+            {testingEmail ? <Loader2 size={13} className="animate-spin" /> : <Mail size={13} />}
+            {testingEmail ? 'Sending…' : 'Send test email'}
+          </button>
+          {testEmailResult && (
+            <span className={`text-xs ${testEmailResult.startsWith('Sent') ? 'text-n3-success' : 'text-n3-danger'}`}>
+              {testEmailResult}
+            </span>
           )}
         </div>
       </div>
