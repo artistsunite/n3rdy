@@ -41,29 +41,32 @@ export default function BriefingsPanel() {
   const [growthSignals, setGrowthSignals] = useState<GrowthSignal | null>(null);
 
   const loadBriefings = async () => {
-    const res = await fetch('/api/briefings?limit=10');
-    const data = await res.json();
-    setBriefings(data.briefings ?? []);
-    setLoading(false);
+    try {
+      const res = await fetch('/api/briefings?limit=10');
+      const data = await res.json();
+      setBriefings(data.briefings ?? []);
+    } catch { /* non-fatal — briefings stay empty */ }
+    finally { setLoading(false); }
   };
 
   const loadGrowthSignals = async () => {
-    const [oppRes, evtRes] = await Promise.all([
-      fetch('/api/growth/opportunities?status=new'),
-      fetch('/api/competitors/events?take=6'),
-    ]);
-    if (!oppRes.ok || !evtRes.ok) return;
-    const [oppData, evtData] = await Promise.all([
-      oppRes.json() as Promise<{ opportunities: GrowthSignal['opportunities'] }>,
-      evtRes.json() as Promise<{ events: GrowthSignal['competitorEvents'] }>,
-    ]);
-
-    setGrowthSignals({
-      opportunities: (oppData.opportunities ?? [])
-        .sort((a, b) => b.urgencyScore - a.urgencyScore)
-        .slice(0, 3),
-      competitorEvents: (evtData.events ?? []).slice(0, 3),
-    });
+    try {
+      const [oppRes, evtRes] = await Promise.all([
+        fetch('/api/growth/opportunities?status=new'),
+        fetch('/api/competitors/events?take=6'),
+      ]);
+      if (!oppRes.ok || !evtRes.ok) return;
+      const [oppData, evtData] = await Promise.all([
+        oppRes.json() as Promise<{ opportunities: GrowthSignal['opportunities'] }>,
+        evtRes.json() as Promise<{ events: GrowthSignal['competitorEvents'] }>,
+      ]);
+      setGrowthSignals({
+        opportunities: (oppData.opportunities ?? [])
+          .sort((a, b) => b.urgencyScore - a.urgencyScore)
+          .slice(0, 3),
+        competitorEvents: (evtData.events ?? []).slice(0, 3),
+      });
+    } catch { /* non-fatal */ }
   };
 
   useEffect(() => {
