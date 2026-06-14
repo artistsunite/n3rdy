@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
@@ -48,9 +48,21 @@ interface Props {
   userImage?: string | null;
 }
 
+interface Badges { unreadEvents: number; newOpportunities: number }
+
 export default function DashboardShell({ children, userName, userImage }: Props) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [badges, setBadges] = useState<Badges>({ unreadEvents: 0, newOpportunities: 0 });
+
+  useEffect(() => {
+    function fetchBadges() {
+      fetch('/api/dashboard/badges').then(r => r.json()).then((d: Badges) => setBadges(d)).catch(() => null);
+    }
+    fetchBadges();
+    const interval = setInterval(fetchBadges, 3 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div
@@ -88,6 +100,10 @@ export default function DashboardShell({ children, userName, userImage }: Props)
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
             const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
+            const badge =
+              href === '/dashboard/competitors' && badges.unreadEvents > 0 ? badges.unreadEvents :
+              href === '/dashboard/growth' && badges.newOpportunities > 0 ? badges.newOpportunities :
+              0;
             return (
               <Link
                 key={href}
@@ -100,7 +116,14 @@ export default function DashboardShell({ children, userName, userImage }: Props)
                 }`}
               >
                 <Icon size={16} />
-                {label}
+                <span className="flex-1">{label}</span>
+                {badge > 0 && (
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                    href === '/dashboard/competitors' ? 'bg-red-500/20 text-red-300' : 'bg-cyan-500/20 text-cyan-300'
+                  }`}>
+                    {badge > 99 ? '99+' : badge}
+                  </span>
+                )}
               </Link>
             );
           })}

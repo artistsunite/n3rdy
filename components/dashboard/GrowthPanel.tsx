@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, TrendingUp, FlaskConical, Loader2, ChevronRight, Check, X, Play, Square, ClipboardList } from 'lucide-react';
+import { Zap, TrendingUp, FlaskConical, Loader2, ChevronRight, Check, X, Play, Square, ClipboardList, ArrowRight } from 'lucide-react';
 
 interface GrowthOpportunity {
   id: string;
@@ -231,6 +231,13 @@ export default function GrowthPanel() {
                       )}
                     </div>
                     <div className="flex gap-1">
+                      <button
+                        onClick={() => { updateOpportunity(opp.id, 'actioned'); setTab('experiments'); }}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-400/60 hover:text-purple-300 text-[10px] font-medium transition-all"
+                        title="Create experiment from this opportunity"
+                      >
+                        Test <ArrowRight size={10} />
+                      </button>
                       <button onClick={() => updateOpportunity(opp.id, opp.status === 'actioned' ? 'new' : 'actioned')}
                         className={`p-1.5 rounded-lg transition-all ${opp.status === 'actioned' ? 'bg-green-500/20 text-green-400' : 'bg-white/5 hover:bg-green-500/10 text-white/30 hover:text-green-400'}`}
                         title={opp.status === 'actioned' ? 'Unmark' : 'Mark actioned'}>

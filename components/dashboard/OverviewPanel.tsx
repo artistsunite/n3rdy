@@ -11,6 +11,7 @@ import UserProfileWidget from './UserProfileWidget';
 import GoogleSyncBanner from './GoogleSyncBanner';
 import ExpandableWidget from './ExpandableWidget';
 import OverviewControlDrawer, { DashboardFilters } from './OverviewControlDrawer';
+import GrowthIntelligenceWidget from './GrowthIntelligenceWidget';
 
 interface SentimentData {
   overall: number;
@@ -369,6 +370,7 @@ export default function OverviewPanel({ userName }: { userName?: string | null }
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {isVisible('growth') && <GrowthIntelligenceWidget />}
           {isVisible('watchlist') && <WatchlistActivityWidget />}
           {isVisible('marketing') && <MarketingCalendarWidget />}
           {isVisible('trending') && <TrendingPostWidget />}
