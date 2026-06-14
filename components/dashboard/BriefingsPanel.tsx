@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { FileText, ChevronDown, ChevronUp, Zap, AlertCircle, TrendingUp, Crosshair, ArrowRight } from 'lucide-react';
+import { FileText, ChevronDown, ChevronUp, Zap, AlertCircle, TrendingUp, Crosshair, ArrowRight, Mail, Check } from 'lucide-react';
 import Link from 'next/link';
 
 interface GrowthSignal {
@@ -34,6 +34,8 @@ export default function BriefingsPanel() {
   const [briefings, setBriefings] = useState<Briefing[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [emailing, setEmailing] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [growthSignals, setGrowthSignals] = useState<GrowthSignal | null>(null);
@@ -81,6 +83,25 @@ export default function BriefingsPanel() {
     loadGrowthSignals();
   }, []);
 
+  const sendEmail = async () => {
+    setEmailing(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/briefings/email', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? 'Email send failed.');
+      } else {
+        setEmailSent(true);
+        setTimeout(() => setEmailSent(false), 3000);
+      }
+    } catch {
+      setError('Network error sending email.');
+    } finally {
+      setEmailing(false);
+    }
+  };
+
   const triggerBriefing = async () => {
     setGenerating(true);
     setError(null);
@@ -116,14 +137,25 @@ export default function BriefingsPanel() {
           <h1 className="text-2xl font-bold text-white">Briefings</h1>
           <p className="text-white/50 text-sm mt-1">AI-generated executive intelligence reports</p>
         </div>
-        <button
-          onClick={triggerBriefing}
-          disabled={generating}
-          className="inline-flex items-center gap-2 bg-n3-primary text-n3-bg px-4 py-2 rounded-lg text-sm font-semibold hover:bg-n3-primary/90 transition-colors disabled:opacity-60"
-        >
-          <Zap size={14} />
-          {generating ? 'Generating…' : 'Generate Now'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={sendEmail}
+            disabled={emailing || briefings.length === 0}
+            className="inline-flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-40"
+            title="Email today's briefing to yourself"
+          >
+            {emailSent ? <Check size={14} className="text-n3-success" /> : <Mail size={14} />}
+            {emailing ? 'Sending…' : emailSent ? 'Sent!' : 'Email Brief'}
+          </button>
+          <button
+            onClick={triggerBriefing}
+            disabled={generating}
+            className="inline-flex items-center gap-2 bg-n3-primary text-n3-bg px-4 py-2 rounded-lg text-sm font-semibold hover:bg-n3-primary/90 transition-colors disabled:opacity-60"
+          >
+            <Zap size={14} />
+            {generating ? 'Generating…' : 'Generate Now'}
+          </button>
+        </div>
       </div>
 
       {growthSignals && (growthSignals.opportunities.length > 0 || growthSignals.competitorEvents.length > 0) && (
