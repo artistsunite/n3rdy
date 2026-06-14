@@ -25,6 +25,7 @@ interface Article {
 }
 
 const SENTIMENTS = ['all', 'positive', 'negative', 'neutral'];
+const RISK_OPTIONS = ['all', 'low', 'medium', 'high', 'critical'];
 const IMPACT_OPTIONS = [
   { label: 'Any impact', value: 0 },
   { label: 'Impact 3+', value: 0.3 },
@@ -41,6 +42,7 @@ export default function NewsFeed() {
   const [sentiment, setSentiment] = useState('all');
   const [minImpact, setMinImpact] = useState(0);
   const [category, setCategory] = useState('all');
+  const [riskLevel, setRiskLevel] = useState('all');
   const [search, setSearch] = useState(() => searchParams.get('search') ?? '');
   const [debouncedSearch, setDebouncedSearch] = useState(() => searchParams.get('search') ?? '');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -57,6 +59,7 @@ export default function NewsFeed() {
     if (sentiment !== 'all') params.set('sentiment', sentiment);
     if (minImpact > 0) params.set('minImpact', String(minImpact));
     if (category !== 'all') params.set('category', category);
+    if (riskLevel !== 'all') params.set('riskLevel', riskLevel);
     if (debouncedSearch.length >= 2) params.set('search', debouncedSearch);
     const res = await fetch(`/api/articles?${params}`);
     const data = await res.json();
@@ -69,11 +72,11 @@ export default function NewsFeed() {
     }
     setTotal(data.total ?? 0);
     setLoading(false);
-  }, [offset, sentiment, minImpact, category, debouncedSearch]);
+  }, [offset, sentiment, minImpact, category, riskLevel, debouncedSearch]);
 
   useEffect(() => {
     load(true);
-  }, [sentiment, minImpact, category, debouncedSearch]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sentiment, minImpact, category, riskLevel, debouncedSearch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Derive categories from loaded articles
   const categories = ['all', ...Array.from(new Set(articles.map(a => a.source.category).filter(Boolean)))].sort((a, b) => a === 'all' ? -1 : b === 'all' ? 1 : a.localeCompare(b));
@@ -137,6 +140,24 @@ export default function NewsFeed() {
               }`}
             >
               {opt.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-1 liquid-glass-card rounded-lg p-1">
+          {RISK_OPTIONS.map(r => (
+            <button
+              key={r}
+              onClick={() => setRiskLevel(r)}
+              className={`px-2.5 py-1.5 rounded text-xs font-medium capitalize transition-colors ${
+                riskLevel === r
+                  ? r === 'high' || r === 'critical' ? 'bg-n3-danger/15 text-n3-danger'
+                    : r === 'medium' ? 'bg-n3-warning/15 text-n3-warning'
+                    : r === 'low' ? 'bg-n3-success/15 text-n3-success'
+                    : 'bg-n3-primary/10 text-n3-primary'
+                  : 'text-white/50 hover:text-white'
+              }`}
+            >
+              {r === 'all' ? 'Any risk' : r}
             </button>
           ))}
         </div>

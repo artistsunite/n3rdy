@@ -36,6 +36,7 @@ interface GrowthExperiment {
 }
 
 type ActiveTab = 'opportunities' | 'experiments';
+type SortBy = 'urgency' | 'impact' | 'confidence' | 'date';
 
 const TYPE_COLORS: Record<string, string> = {
   revenue: 'bg-green-500/20 text-green-400',
@@ -148,12 +149,24 @@ export default function GrowthPanel() {
   }, [resultInputs]);
 
   const [oppTypeFilter, setOppTypeFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<SortBy>('urgency');
+  const [showDismissed, setShowDismissed] = useState(false);
 
   const activeOpps = opportunities.filter(o => o.status !== 'dismissed');
+  const dismissedOpps = opportunities.filter(o => o.status === 'dismissed');
   const newOpps = activeOpps.filter(o => o.status === 'new').length;
   const highImpact = opportunities.filter(o => o.impactScore >= 0.7 && o.status !== 'dismissed').length;
   const oppTypes = Array.from(new Set(activeOpps.map(o => o.type)));
-  const filteredOpps = oppTypeFilter === 'all' ? activeOpps : activeOpps.filter(o => o.type === oppTypeFilter);
+
+  const sortFn = (a: GrowthOpportunity, b: GrowthOpportunity) => {
+    if (sortBy === 'urgency') return b.urgencyScore - a.urgencyScore;
+    if (sortBy === 'impact') return b.impactScore - a.impactScore;
+    if (sortBy === 'confidence') return b.confidenceScore - a.confidenceScore;
+    return new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime();
+  };
+
+  const baseFiltered = oppTypeFilter === 'all' ? activeOpps : activeOpps.filter(o => o.type === oppTypeFilter);
+  const filteredOpps = [...baseFiltered].sort(sortFn);
   const runningExps = experiments.filter(e => e.status === 'running').length;
   const pendingExps = experiments.filter(e => e.status === 'pending').length;
 
@@ -220,25 +233,36 @@ export default function GrowthPanel() {
               </div>
             ) : (
               <>
-                {oppTypes.length > 1 && (
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() => setOppTypeFilter('all')}
-                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${oppTypeFilter === 'all' ? 'bg-white/15 text-white' : 'bg-white/5 text-white/40 hover:text-white/70'}`}
-                    >
-                      All ({activeOpps.length})
-                    </button>
-                    {oppTypes.map(type => (
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  {oppTypes.length > 1 && (
+                    <div className="flex flex-wrap gap-1.5">
                       <button
-                        key={type}
-                        onClick={() => setOppTypeFilter(type)}
-                        className={`px-3 py-1 rounded-full text-xs font-medium capitalize transition-colors ${oppTypeFilter === type ? (TYPE_COLORS[type] ?? 'bg-white/15 text-white') : 'bg-white/5 text-white/40 hover:text-white/70'}`}
+                        onClick={() => setOppTypeFilter('all')}
+                        className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${oppTypeFilter === 'all' ? 'bg-white/15 text-white' : 'bg-white/5 text-white/40 hover:text-white/70'}`}
                       >
-                        {type.replace(/_/g, ' ')} ({activeOpps.filter(o => o.type === type).length})
+                        All ({activeOpps.length})
+                      </button>
+                      {oppTypes.map(type => (
+                        <button
+                          key={type}
+                          onClick={() => setOppTypeFilter(type)}
+                          className={`px-3 py-1 rounded-full text-xs font-medium capitalize transition-colors ${oppTypeFilter === type ? (TYPE_COLORS[type] ?? 'bg-white/15 text-white') : 'bg-white/5 text-white/40 hover:text-white/70'}`}
+                        >
+                          {type.replace(/_/g, ' ')} ({activeOpps.filter(o => o.type === type).length})
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1 ml-auto">
+                    <span className="text-white/25 text-[10px] mr-1">Sort:</span>
+                    {(['urgency', 'impact', 'confidence', 'date'] as SortBy[]).map(s => (
+                      <button key={s} onClick={() => setSortBy(s)}
+                        className={`px-2 py-0.5 rounded text-[10px] font-medium capitalize transition-colors ${sortBy === s ? 'bg-cyan-500/20 text-cyan-400' : 'text-white/30 hover:text-white/60'}`}>
+                        {s}
                       </button>
                     ))}
                   </div>
-                )}
+                </div>
               {filteredOpps.map(opp => (
                 <motion.div key={opp.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                   className="liquid-glass-card rounded-2xl p-5">
@@ -298,6 +322,37 @@ export default function GrowthPanel() {
                   )}
                 </motion.div>
               ))}
+                {dismissedOpps.length > 0 && (
+                  <div className="pt-2">
+                    <button
+                      onClick={() => setShowDismissed(v => !v)}
+                      className="text-white/25 hover:text-white/50 text-xs flex items-center gap-1.5 transition-colors"
+                    >
+                      <X size={11} />
+                      {showDismissed ? 'Hide' : 'Show'} {dismissedOpps.length} dismissed
+                    </button>
+                    {showDismissed && (
+                      <div className="mt-2 space-y-2">
+                        {dismissedOpps.map(opp => (
+                          <div key={opp.id} className="liquid-glass-card rounded-xl px-4 py-3 flex items-center justify-between gap-3 opacity-50">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${TYPE_COLORS[opp.type] ?? 'bg-white/10 text-white/60'}`}>
+                                {opp.type.replace(/_/g, ' ')}
+                              </span>
+                              <span className="text-white/60 text-sm truncate">{opp.title}</span>
+                            </div>
+                            <button
+                              onClick={() => updateOpportunity(opp.id, 'new')}
+                              className="flex-shrink-0 text-xs text-white/40 hover:text-cyan-400 bg-white/5 hover:bg-cyan-500/10 px-2 py-1 rounded-lg transition-all"
+                            >
+                              Restore
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </>
             )}
           </motion.div>
