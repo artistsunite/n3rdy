@@ -147,9 +147,13 @@ export default function GrowthPanel() {
     setSavingResult(null);
   }, [resultInputs]);
 
+  const [oppTypeFilter, setOppTypeFilter] = useState<string>('all');
+
   const activeOpps = opportunities.filter(o => o.status !== 'dismissed');
   const newOpps = activeOpps.filter(o => o.status === 'new').length;
   const highImpact = opportunities.filter(o => o.impactScore >= 0.7 && o.status !== 'dismissed').length;
+  const oppTypes = Array.from(new Set(activeOpps.map(o => o.type)));
+  const filteredOpps = oppTypeFilter === 'all' ? activeOpps : activeOpps.filter(o => o.type === oppTypeFilter);
   const runningExps = experiments.filter(e => e.status === 'running').length;
   const pendingExps = experiments.filter(e => e.status === 'pending').length;
 
@@ -215,7 +219,27 @@ export default function GrowthPanel() {
                 <p className="text-white/25 text-xs mt-1">Complete your Business Profile then click &quot;Find Opportunities&quot;.</p>
               </div>
             ) : (
-              activeOpps.map(opp => (
+              <>
+                {oppTypes.length > 1 && (
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => setOppTypeFilter('all')}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${oppTypeFilter === 'all' ? 'bg-white/15 text-white' : 'bg-white/5 text-white/40 hover:text-white/70'}`}
+                    >
+                      All ({activeOpps.length})
+                    </button>
+                    {oppTypes.map(type => (
+                      <button
+                        key={type}
+                        onClick={() => setOppTypeFilter(type)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium capitalize transition-colors ${oppTypeFilter === type ? (TYPE_COLORS[type] ?? 'bg-white/15 text-white') : 'bg-white/5 text-white/40 hover:text-white/70'}`}
+                      >
+                        {type.replace(/_/g, ' ')} ({activeOpps.filter(o => o.type === type).length})
+                      </button>
+                    ))}
+                  </div>
+                )}
+              {filteredOpps.map(opp => (
                 <motion.div key={opp.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                   className="liquid-glass-card rounded-2xl p-5">
                   <div className="flex items-start justify-between mb-3">
@@ -273,7 +297,8 @@ export default function GrowthPanel() {
                     </div>
                   )}
                 </motion.div>
-              ))
+              ))}
+              </>
             )}
           </motion.div>
         )}
