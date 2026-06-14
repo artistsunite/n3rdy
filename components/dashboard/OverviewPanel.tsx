@@ -16,7 +16,7 @@ import ProfileSetupBanner from './ProfileSetupBanner';
 
 interface SentimentData {
   overall: number;
-  byCategory: Array<{ category: string; avgScore: number; articleCount: number; dominant: string }>;
+  byCategory: Array<{ category: string; avgScore: number; articleCount: number; dominant: string; bullish: number; bearish: number }>;
   timeSeries: Array<{ time: string; avgScore: number; count: number }>;
 }
 
@@ -152,8 +152,11 @@ export default function OverviewPanel({ userName }: { userName?: string | null }
   const isVisible = (key: string) => filters.widgetVisibility[key] !== false;
 
   const overallScore = sentiment?.overall ?? 0;
-  const opportunities = articles.filter(a => (a.analysis?.sentimentScore ?? 0) > 0.3).length;
-  const risks = articles.filter(a => a.analysis?.riskLevel === 'high' || a.analysis?.riskLevel === 'critical').length;
+  // Use full sentiment data (all articles in period) for aggregate stats
+  const bullishTotal = (sentiment?.byCategory ?? []).reduce((sum, c) => sum + c.bullish, 0);
+  const bearishTotal = (sentiment?.byCategory ?? []).reduce((sum, c) => sum + c.bearish, 0);
+  const opportunities = bullishTotal;
+  const risks = bearishTotal;
 
   // Sparkline data from timeSeries
   const sparkData = (sentiment?.timeSeries ?? []).slice(-8);
@@ -175,16 +178,16 @@ export default function OverviewPanel({ userName }: { userName?: string | null }
       spark: [],
     },
     {
-      label: 'Opportunities',
+      label: 'Bullish Signals',
       value: <span className="text-n3-success font-bold">+{opportunities}</span>,
-      sub: 'bullish signals',
+      sub: 'articles this period',
       icon: null,
       spark: [],
     },
     {
-      label: 'Risk Flags',
+      label: 'Bearish Signals',
       value: <span className={risks > 0 ? 'text-n3-danger font-bold' : 'text-white/50 font-bold'}>{risks}</span>,
-      sub: risks > 0 ? 'high impact' : 'clear',
+      sub: risks > 0 ? 'watch carefully' : 'none flagged',
       icon: null,
       spark: [],
     },
