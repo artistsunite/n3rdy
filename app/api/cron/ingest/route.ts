@@ -72,6 +72,29 @@ export async function GET(req: Request) {
     }
   } catch { /* non-fatal */ }
 
+  // Auto-generate advisor reports for users with profiles who haven't had one in 24h
+  let reportsGenerated = 0;
+  try {
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
+    const rawSecret = process.env.CRON_SECRET ?? '';
+    const secret = (rawSecret.charCodeAt(0) === 0xFEFF ? rawSecret.slice(1) : rawSecret).trim();
+
+    const profiles = await db.businessProfile.findMany({ select: { userId: true } });
+    for (const { userId } of profiles) {
+      const recentReport = await db.advisorReport.findFirst({
+        where: { userId, generatedAt: { gte: twentyFourHoursAgo } },
+      });
+      if (!recentReport) {
+        const r = await fetch(`${baseUrl}/api/advisor/report`, {
+          method: 'POST',
+          headers: { 'x-cron-user-id': userId, 'x-cron-secret': secret },
+        });
+        if (r.ok) reportsGenerated++;
+      }
+    }
+  } catch { /* non-fatal */ }
+
   // Detect competitor news mentions in recently ingested articles
   let newsMentionsCreated = 0;
   try {
@@ -118,5 +141,5 @@ export async function GET(req: Request) {
     }
   } catch { /* non-fatal */ }
 
-  return NextResponse.json({ ok: true, enqueued, sourceCount: sources.length, predictionsValidated, competitorScansEnqueued, opportunitiesGenerated, newsMentionsCreated });
+  return NextResponse.json({ ok: true, enqueued, sourceCount: sources.length, predictionsValidated, competitorScansEnqueued, opportunitiesGenerated, reportsGenerated, newsMentionsCreated });
 }

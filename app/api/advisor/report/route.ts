@@ -19,11 +19,21 @@ export async function GET() {
   return NextResponse.json({ report });
 }
 
-export async function POST() {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export async function POST(req: Request) {
+  // Support cron-triggered generation via x-cron-user-id header
+  const cronUserId = req.headers.get('x-cron-user-id');
+  const cronSecret = req.headers.get('x-cron-secret');
+  const envSecret = process.env.CRON_SECRET;
+  const rawEnvSecret = envSecret ? (envSecret.charCodeAt(0) === 0xFEFF ? envSecret.slice(1) : envSecret).trim() : '';
 
-  const userId = session.user.id;
+  let userId: string;
+  if (cronUserId && cronSecret && rawEnvSecret && cronSecret === rawEnvSecret) {
+    userId = cronUserId;
+  } else {
+    const session = await auth();
+    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    userId = session.user.id;
+  }
 
   const [profile, briefing, opportunities, competitorEvents, trendingTopics] = await Promise.all([
     db.businessProfile.findUnique({ where: { userId } }),

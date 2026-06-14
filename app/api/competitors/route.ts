@@ -9,7 +9,7 @@ export async function GET() {
 
   const competitors = await db.competitor.findMany({
     where: { userId: session.user.id, isActive: true },
-    include: { _count: { select: { events: true } } },
+    include: { _count: { select: { events: { where: { isRead: false } } } } },
     orderBy: { createdAt: 'asc' },
   });
 
