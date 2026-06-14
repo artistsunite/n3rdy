@@ -32,6 +32,7 @@ export default function NewsFeed() {
   const [loading, setLoading] = useState(true);
   const [sentiment, setSentiment] = useState('all');
   const [minImpact, setMinImpact] = useState(0);
+  const [search, setSearch] = useState('');
 
   const load = useCallback(async (reset = false) => {
     setLoading(true);
@@ -60,6 +61,25 @@ export default function NewsFeed() {
       <div>
         <h1 className="text-2xl font-bold text-white">News Feed</h1>
         <p className="text-white/50 text-sm mt-1">{total} articles from your sources</p>
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+        <input
+          placeholder="Search articles…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="w-full liquid-glass-card rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none focus:ring-1 focus:ring-n3-primary/30"
+        />
+        {search && (
+          <button
+            onClick={() => setSearch('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+          >
+            ×
+          </button>
+        )}
       </div>
 
       {/* Filters */}
@@ -96,20 +116,35 @@ export default function NewsFeed() {
       </div>
 
       {/* Articles */}
-      {loading && articles.length === 0 ? (
-        <div className="space-y-3">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-28 liquid-glass-card rounded-xl animate-pulse" />
-          ))}
-        </div>
-      ) : articles.length === 0 ? (
-        <div className="liquid-glass-card rounded-xl p-10 text-center">
-          <p className="text-white/50 text-sm">No articles found. Try adjusting filters or add more sources.</p>
-        </div>
-      ) : (
-        <>
+      {(() => {
+        const q = search.toLowerCase().trim();
+        const filtered = q
+          ? articles.filter(a => a.title.toLowerCase().includes(q) || a.analysis?.shortSummary?.toLowerCase().includes(q))
+          : articles;
+
+        if (loading && articles.length === 0) return (
           <div className="space-y-3">
-            {articles.map((a) => (
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="h-28 liquid-glass-card rounded-xl animate-pulse" />
+            ))}
+          </div>
+        );
+
+        if (filtered.length === 0) return (
+          <div className="liquid-glass-card rounded-xl p-10 text-center">
+            <p className="text-white/50 text-sm">
+              {q ? `No articles matching "${search}"` : 'No articles found. Try adjusting filters or add more sources.'}
+            </p>
+          </div>
+        );
+
+        return (
+          <>
+            {q && (
+              <p className="text-xs text-white/30 px-1">{filtered.length} result{filtered.length !== 1 ? 's' : ''} for &ldquo;{search}&rdquo;</p>
+            )}
+            <div className="space-y-3">
+              {filtered.map((a) => (
               <ArticleCard
                 key={a.id}
                 title={a.title}
@@ -124,20 +159,21 @@ export default function NewsFeed() {
                 bullishBearish={a.analysis?.bullishBearish}
                 sectorsAffected={a.analysis?.sectorsAffected as string[]}
               />
-            ))}
-          </div>
+              ))}
+            </div>
 
-          {articles.length < total && (
-            <button
-              onClick={() => load(false)}
-              disabled={loading}
-              className="w-full py-3 liquid-glass-card text-white/50 text-sm rounded-xl hover:text-n3-primary transition-colors disabled:opacity-50"
-            >
-              {loading ? 'Loading...' : `Load more (${total - articles.length} remaining)`}
-            </button>
-          )}
-        </>
-      )}
+            {!q && articles.length < total && (
+              <button
+                onClick={() => load(false)}
+                disabled={loading}
+                className="w-full py-3 liquid-glass-card text-white/50 text-sm rounded-xl hover:text-n3-primary transition-colors disabled:opacity-50"
+              >
+                {loading ? 'Loading...' : `Load more (${total - articles.length} remaining)`}
+              </button>
+            )}
+          </>
+        );
+      })()}
     </div>
   );
 }
