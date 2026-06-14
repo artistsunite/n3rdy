@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import Link from 'next/link';
 import { Zap, AlertCircle } from 'lucide-react';
 import PredictionCard, { PredictionData } from './PredictionCard';
 import AccuracyDashboard from './AccuracyDashboard';
@@ -133,7 +134,19 @@ export default function PredictionsPanel() {
       {error && (
         <div className="flex items-start gap-3 bg-n3-danger/10 border border-n3-danger/20 rounded-xl px-4 py-3">
           <AlertCircle size={16} className="text-n3-danger mt-0.5 flex-shrink-0" />
-          <p className="text-sm text-n3-danger">{error}</p>
+          <p className="text-sm text-n3-danger">
+            {error}
+            {error.toLowerCase().includes('article') && (
+              <Link href="/dashboard/sources" className="ml-2 underline text-red-300 hover:text-red-200 transition-colors">
+                Set up Sources →
+              </Link>
+            )}
+            {error.toLowerCase().includes('watchlist') && (
+              <Link href="/dashboard/watchlist" className="ml-2 underline text-red-300 hover:text-red-200 transition-colors">
+                Add Watchlist Items →
+              </Link>
+            )}
+          </p>
         </div>
       )}
 
@@ -159,6 +172,29 @@ export default function PredictionsPanel() {
 
           {/* Right: tabs + content */}
           <div className="flex-1 min-w-0 space-y-4">
+            {/* Mobile-only accuracy summary */}
+            {totalPredictions > 0 && (
+              <div className="lg:hidden flex items-center gap-4 liquid-glass-card rounded-xl px-4 py-3 text-sm">
+                <div className="flex-1 text-center">
+                  <div className="font-bold text-white">{Math.round((correctPredictions / totalPredictions) * 100)}%</div>
+                  <div className="text-xs text-white/40">Accuracy</div>
+                </div>
+                <div className="w-px h-8 bg-white/10" />
+                <div className="flex-1 text-center">
+                  <div className="font-bold text-white">{correctPredictions}/{totalPredictions}</div>
+                  <div className="text-xs text-white/40">Correct</div>
+                </div>
+                {streak !== 0 && (
+                  <>
+                    <div className="w-px h-8 bg-white/10" />
+                    <div className="flex-1 text-center">
+                      <div className={`font-bold ${streak > 0 ? 'text-n3-success' : 'text-n3-danger'}`}>{streak > 0 ? `+${streak}` : streak}</div>
+                      <div className="text-xs text-white/40">Streak</div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
             {/* Tabs */}
             <div className="flex gap-1 border-b border-white/10">
               {TABS.map(t => (

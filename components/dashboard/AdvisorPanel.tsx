@@ -293,11 +293,12 @@ export default function AdvisorPanel() {
               <>
                 {(() => {
                   const ageH = (Date.now() - new Date(report.generatedAt).getTime()) / 3600000;
+                  const ageStr = ageH >= 48 ? `${Math.round(ageH / 24)}d` : `${Math.round(ageH)}h`;
                   return ageH > 12 ? (
                     <div className="liquid-glass rounded-xl p-3 flex items-center gap-2 border border-yellow-500/20">
                       <Clock size={13} className="text-yellow-400 flex-shrink-0" />
                       <p className="text-yellow-400/80 text-xs flex-1">
-                        Report is {Math.round(ageH)}h old — click Regenerate for fresh insights
+                        Report is {ageStr} old — click Regenerate for fresh insights
                       </p>
                       <button onClick={generate} disabled={generating}
                         className="text-xs bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 px-3 py-1.5 rounded-lg font-medium transition-all disabled:opacity-50 flex items-center gap-1.5">

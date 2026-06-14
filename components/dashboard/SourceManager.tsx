@@ -85,18 +85,21 @@ export default function SourceManager() {
             placeholder="Source name (e.g. Reuters)"
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            onKeyDown={(e) => { if (e.key === 'Enter' && form.name && form.url) addSource(); }}
             className="bg-white/5 border border-white/10 text-white text-sm px-3 py-2 rounded-lg outline-none focus:border-n3-primary/50 transition-colors placeholder:text-white/30"
           />
           <input
             placeholder="Website URL"
             value={form.url}
             onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))}
+            onKeyDown={(e) => { if (e.key === 'Enter' && form.name && form.url) addSource(); }}
             className="bg-white/5 border border-white/10 text-white text-sm px-3 py-2 rounded-lg outline-none focus:border-n3-primary/50 transition-colors placeholder:text-white/30"
           />
           <input
             placeholder="RSS feed URL (optional)"
             value={form.rssUrl}
             onChange={(e) => setForm((f) => ({ ...f, rssUrl: e.target.value }))}
+            onKeyDown={(e) => { if (e.key === 'Enter' && form.name && form.url) addSource(); }}
             className="bg-white/5 border border-white/10 text-white text-sm px-3 py-2 rounded-lg outline-none focus:border-n3-primary/50 transition-colors placeholder:text-white/30"
           />
         </div>
