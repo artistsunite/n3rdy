@@ -26,15 +26,21 @@ export async function POST(req: NextRequest) {
   const userSources = await db.userSource.findMany({ where: { userId, isActive: true }, select: { sourceId: true } });
   const sourceIds = userSources.map(s => s.sourceId);
 
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3600 * 1000);
+
   const [articles, competitorEvents, trendingTopics, userInsights] = await Promise.all([
     sourceIds.length > 0 ? db.article.findMany({
-      where: { sourceId: { in: sourceIds }, analysis: { isNot: null } },
+      where: {
+        sourceId: { in: sourceIds },
+        analysis: { isNot: null },
+        publishedAt: { gte: thirtyDaysAgo },
+      },
       include: { analysis: { select: { shortSummary: true, marketImpactScore: true } } },
       orderBy: [{ analysis: { marketImpactScore: 'desc' } }, { publishedAt: 'desc' }],
       take: 15,
     }) : Promise.resolve([]),
     db.competitorEvent.findMany({
-      where: { userId },
+      where: { userId, detectedAt: { gte: thirtyDaysAgo } },
       orderBy: { detectedAt: 'desc' },
       take: 8,
     }),

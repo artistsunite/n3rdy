@@ -47,7 +47,7 @@ export async function POST(req: Request) {
       take: 5,
     }),
     db.competitorEvent.findMany({
-      where: { userId },
+      where: { userId, detectedAt: { gte: new Date(Date.now() - 30 * 24 * 3600 * 1000) } },
       orderBy: { detectedAt: 'desc' },
       take: 5,
     }),
