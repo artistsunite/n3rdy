@@ -912,12 +912,16 @@ export async function generateAdvisorReport(params: {
   opportunities: Array<{ title: string; type: string; description: string; impactScore: number; urgencyScore: number }>;
   competitorEvents: Array<{ title: string; eventType: string; aiSummary: string; importance: string }>;
   trendingTopics: Array<{ name: string; category: string }>;
+  recentArticles?: Array<{ title: string; sentiment?: string | null; shortSummary?: string | null }>;
 }): Promise<AdvisorReportContent> {
-  const { businessProfile, recentBriefingSummary, opportunities, competitorEvents, trendingTopics } = params;
+  const { businessProfile, recentBriefingSummary, opportunities, competitorEvents, trendingTopics, recentArticles } = params;
 
   const oppsText = opportunities.slice(0, 5).map(o => `- [${o.type}] ${o.title} (impact: ${o.impactScore.toFixed(1)}, urgency: ${o.urgencyScore.toFixed(1)}): ${o.description}`).join('\n');
   const eventsText = competitorEvents.slice(0, 5).map(e => `- [${e.importance}] ${e.title}: ${e.aiSummary}`).join('\n');
   const topicsText = trendingTopics.slice(0, 8).map(t => t.name).join(', ');
+  const articlesText = recentArticles && recentArticles.length > 0
+    ? recentArticles.slice(0, 8).map(a => `- [${a.sentiment ?? 'neutral'}] ${a.title}${a.shortSummary ? `: ${a.shortSummary}` : ''}`).join('\n')
+    : null;
 
   const prompt = `You are an elite business growth advisor. Write a strategic weekly intelligence report for this business owner.
 
@@ -931,6 +935,7 @@ Growth Goal: ${businessProfile.growthGoal ?? 'N/A'}
 
 RECENT NEWS SUMMARY:
 ${recentBriefingSummary || 'No recent briefing available.'}
+${articlesText ? `\nHIGH-IMPACT ARTICLES (last 48h):\n${articlesText}` : ''}
 
 TOP GROWTH OPPORTUNITIES DETECTED:
 ${oppsText || 'None identified yet.'}

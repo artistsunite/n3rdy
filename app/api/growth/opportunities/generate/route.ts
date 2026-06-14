@@ -8,8 +8,11 @@ export async function POST(req: NextRequest) {
   const cronUserId = req.headers.get('x-cron-user-id');
   const cronSecret = req.headers.get('x-cron-secret');
 
+  const envSecret = process.env.CRON_SECRET;
+  const rawEnvSecret = envSecret ? (envSecret.charCodeAt(0) === 0xFEFF ? envSecret.slice(1) : envSecret).trim() : '';
+
   let userId: string;
-  if (cronUserId && cronSecret === process.env.CRON_SECRET) {
+  if (cronUserId && cronSecret && rawEnvSecret && cronSecret === rawEnvSecret) {
     userId = cronUserId;
   } else if (session?.user?.id) {
     userId = session.user.id;
@@ -20,13 +23,16 @@ export async function POST(req: NextRequest) {
   const profile = await db.businessProfile.findUnique({ where: { userId } });
   if (!profile) return NextResponse.json({ error: 'Business profile required' }, { status: 400 });
 
+  const userSources = await db.userSource.findMany({ where: { userId, isActive: true }, select: { sourceId: true } });
+  const sourceIds = userSources.map(s => s.sourceId);
+
   const [articles, competitorEvents, trendingTopics, userInsights] = await Promise.all([
-    db.article.findMany({
-      where: { analysis: { isNot: null } },
-      include: { analysis: true },
-      orderBy: { publishedAt: 'desc' },
+    sourceIds.length > 0 ? db.article.findMany({
+      where: { sourceId: { in: sourceIds }, analysis: { isNot: null } },
+      include: { analysis: { select: { shortSummary: true, marketImpactScore: true } } },
+      orderBy: [{ analysis: { marketImpactScore: 'desc' } }, { publishedAt: 'desc' }],
       take: 15,
-    }),
+    }) : Promise.resolve([]),
     db.competitorEvent.findMany({
       where: { userId },
       orderBy: { detectedAt: 'desc' },

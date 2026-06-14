@@ -35,7 +35,10 @@ export async function POST(req: Request) {
     userId = session.user.id;
   }
 
-  const [profile, briefing, opportunities, competitorEvents, trendingTopics] = await Promise.all([
+  const userSources = await db.userSource.findMany({ where: { userId, isActive: true }, select: { sourceId: true } });
+  const sourceIds = userSources.map(s => s.sourceId);
+
+  const [profile, briefing, opportunities, competitorEvents, trendingTopics, recentArticles] = await Promise.all([
     db.businessProfile.findUnique({ where: { userId } }),
     db.briefing.findFirst({ where: { userId }, orderBy: { createdAt: 'desc' } }),
     db.growthOpportunity.findMany({
@@ -53,6 +56,16 @@ export async function POST(req: Request) {
       orderBy: { mentionCount: 'desc' },
       take: 8,
     }),
+    sourceIds.length > 0 ? db.article.findMany({
+      where: {
+        sourceId: { in: sourceIds },
+        analysis: { isNot: null },
+        publishedAt: { gte: new Date(Date.now() - 48 * 3600 * 1000) },
+      },
+      include: { analysis: { select: { shortSummary: true, sentiment: true, marketImpactScore: true } } },
+      orderBy: [{ analysis: { marketImpactScore: 'desc' } }, { publishedAt: 'desc' }],
+      take: 8,
+    }) : Promise.resolve([]),
   ]);
 
   if (!profile) return NextResponse.json({ error: 'Business profile required' }, { status: 400 });
@@ -78,6 +91,11 @@ export async function POST(req: Request) {
       importance: e.importance,
     })),
     trendingTopics: trendingTopics.map(t => ({ name: t.name, category: t.category })),
+    recentArticles: recentArticles.map(a => ({
+      title: a.title,
+      sentiment: a.analysis?.sentiment,
+      shortSummary: a.analysis?.shortSummary,
+    })),
   });
 
   const report = await db.advisorReport.create({
