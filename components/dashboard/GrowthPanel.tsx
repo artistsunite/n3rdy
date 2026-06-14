@@ -127,20 +127,24 @@ export default function GrowthPanel() {
 
   const updateOpportunity = useCallback(async (id: string, status: string) => {
     setOpportunities(prev => prev.map(o => o.id === id ? { ...o, status } : o));
-    await fetch(`/api/growth/opportunities/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
-    });
+    try {
+      await fetch(`/api/growth/opportunities/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+    } catch { /* non-fatal — optimistic update already applied */ }
   }, []);
 
   const updateExperiment = useCallback(async (id: string, status: string) => {
     setExperiments(prev => prev.map(e => e.id === id ? { ...e, status } : e));
-    await fetch(`/api/growth/experiments/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
-    });
+    try {
+      await fetch(`/api/growth/experiments/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+    } catch { /* non-fatal — optimistic update already applied */ }
   }, []);
 
   const saveResult = useCallback(async (id: string) => {
