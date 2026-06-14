@@ -480,10 +480,19 @@ export async function generateBriefing(params: {
     businessType?: string;
     industry?: string;
   };
+  businessContext?: {
+    businessName?: string | null;
+    businessType?: string | null;
+    industry?: string | null;
+    growthGoal?: string | null;
+    revenueGoal?: string | null;
+  };
+  competitorEvents?: Array<{ title: string; eventType: string; aiSummary: string; importance: string }>;
+  topOpportunities?: Array<{ title: string; type: string; urgencyScore: number; potentialRevenue?: string | null }>;
 }): Promise<BriefingContent> {
-  const { articles, preferences } = params;
+  const { articles, preferences, businessContext, competitorEvents, topOpportunities } = params;
   const style = preferences?.briefingStyle ?? 'executive';
-  const industry = preferences?.industry ?? 'general';
+  const industry = preferences?.industry ?? businessContext?.industry ?? 'general';
 
   const articleList = articles
     .slice(0, 20)
@@ -493,22 +502,46 @@ export async function generateBriefing(params: {
     )
     .join('\n\n');
 
-  const prompt = `You are an elite market intelligence analyst. Generate an ${style}-style executive briefing for a professional in ${industry}.
+  const businessSection = businessContext?.businessName
+    ? `\nBUSINESS CONTEXT:
+Name: ${businessContext.businessName}
+Type: ${businessContext.businessType ?? 'Unknown'}
+Industry: ${businessContext.industry ?? industry}
+Revenue Goal: ${businessContext.revenueGoal ?? 'N/A'}
+Growth Goal: ${businessContext.growthGoal ?? 'N/A'}
+`
+    : '';
+
+  const competitorSection = competitorEvents && competitorEvents.length > 0
+    ? `\nRECENT COMPETITOR INTELLIGENCE:
+${competitorEvents.slice(0, 5).map(e => `- [${e.importance.toUpperCase()}] [${e.eventType}] ${e.title}: ${e.aiSummary}`).join('\n')}
+`
+    : '';
+
+  const opportunitiesSection = topOpportunities && topOpportunities.length > 0
+    ? `\nTOP GROWTH OPPORTUNITIES DETECTED:
+${topOpportunities.slice(0, 3).map(o => `- [${o.type}] ${o.title}${o.potentialRevenue ? ` (${o.potentialRevenue})` : ''} — urgency: ${(o.urgencyScore * 10).toFixed(1)}/10`).join('\n')}
+`
+    : '';
+
+  const hasGrowthContext = businessSection || competitorSection || opportunitiesSection;
+
+  const prompt = `You are an elite market intelligence analyst. Generate an ${style}-style executive briefing for a professional in ${industry}.${hasGrowthContext ? ' Personalise the analysis for the specific business context provided.' : ''}
 
 IMPORTANT: This is informational analysis only, not financial advice.
-
+${businessSection}${competitorSection}${opportunitiesSection}
 Based on these ${articles.length} articles from the last 24 hours:
 
 ${articleList}
 
 Return ONLY valid JSON with this exact structure:
 {
-  "executiveSummary": "3-4 sentence high-level overview of the most important developments",
+  "executiveSummary": "3-4 sentence high-level overview${hasGrowthContext ? ', tailored to the business context above' : ''}",
   "topStories": [
     {
       "headline": "punchy headline",
       "summary": "2-3 sentence summary",
-      "impact": "why this matters to markets/business",
+      "impact": "why this matters${businessContext?.businessName ? ' to ' + businessContext.businessName : ''}",
       "sentiment": "bullish | bearish | neutral",
       "source": "source name"
     }

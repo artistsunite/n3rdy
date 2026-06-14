@@ -121,7 +121,22 @@ export async function POST(req: NextRequest) {
     })) as typeof articles;
   }
 
-  const preferences = await db.userPreferences.findUnique({ where: { userId: uid } }).catch(() => null);
+  const [preferences, businessProfile, recentCompetitorEvents, topOpportunities] = await Promise.all([
+    db.userPreferences.findUnique({ where: { userId: uid } }).catch(() => null),
+    db.businessProfile.findUnique({ where: { userId: uid } }).catch(() => null),
+    db.competitorEvent.findMany({
+      where: { userId: uid, detectedAt: { gte: new Date(Date.now() - 48 * 60 * 60 * 1000) } },
+      orderBy: [{ importance: 'desc' }, { detectedAt: 'desc' }],
+      take: 8,
+      select: { title: true, eventType: true, aiSummary: true, importance: true },
+    }).catch(() => [] as { title: string; eventType: string; aiSummary: string; importance: string }[]),
+    db.growthOpportunity.findMany({
+      where: { userId: uid, status: { in: ['new', 'viewed'] } },
+      orderBy: { urgencyScore: 'desc' },
+      take: 5,
+      select: { title: true, type: true, urgencyScore: true, potentialRevenue: true },
+    }).catch(() => [] as { title: string; type: string; urgencyScore: number; potentialRevenue: string | null }[]),
+  ]);
 
   let content;
   try {
@@ -145,6 +160,17 @@ export async function POST(req: NextRequest) {
             industry: preferences.industry ?? undefined,
           }
         : undefined,
+      businessContext: businessProfile
+        ? {
+            businessName: businessProfile.businessName,
+            businessType: businessProfile.businessType,
+            industry: businessProfile.industry,
+            growthGoal: businessProfile.growthGoal,
+            revenueGoal: businessProfile.revenueGoal,
+          }
+        : undefined,
+      competitorEvents: recentCompetitorEvents,
+      topOpportunities,
     });
   } catch (aiErr) {
     const msg = (aiErr as Error).message ?? '';
