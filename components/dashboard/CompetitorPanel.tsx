@@ -49,6 +49,7 @@ export default function CompetitorPanel() {
   const [events, setEvents] = useState<CompetitorEvent[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [scanningAll, setScanningAll] = useState(false);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ name: '', website: '', pricingUrl: '', blogUrl: '', productUrl: '' });
 
@@ -103,6 +104,12 @@ export default function CompetitorPanel() {
     setScanning(false);
   }, []);
 
+  const scanAll = useCallback(async () => {
+    setScanningAll(true);
+    await Promise.allSettled(competitors.map(c => fetch(`/api/competitors/${c.id}/scan`, { method: 'POST' })));
+    setScanningAll(false);
+  }, [competitors]);
+
   const deleteCompetitor = useCallback(async (id: string) => {
     await fetch(`/api/competitors/${id}`, { method: 'DELETE' });
     setCompetitors(prev => prev.filter(c => c.id !== id));
@@ -122,13 +129,26 @@ export default function CompetitorPanel() {
           <Crosshair className="text-cyan-400" size={22} />
           <h2 className="text-white font-semibold text-xl">Competitor Intelligence</h2>
         </div>
-        <button
-          onClick={() => setShowAdd(!showAdd)}
-          className="flex items-center gap-2 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 text-cyan-300 px-4 py-2 rounded-xl text-sm font-medium transition-all"
-        >
-          <Plus size={14} />
-          Add Competitor
-        </button>
+        <div className="flex items-center gap-2">
+          {competitors.length > 1 && (
+            <button
+              onClick={scanAll}
+              disabled={scanningAll}
+              className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/80 px-3 py-2 rounded-xl text-sm font-medium transition-all disabled:opacity-50"
+              title="Trigger scan for all competitors"
+            >
+              <RefreshCw size={13} className={scanningAll ? 'animate-spin' : ''} />
+              {scanningAll ? 'Scanning…' : 'Scan All'}
+            </button>
+          )}
+          <button
+            onClick={() => setShowAdd(!showAdd)}
+            className="flex items-center gap-2 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 text-cyan-300 px-4 py-2 rounded-xl text-sm font-medium transition-all"
+          >
+            <Plus size={14} />
+            Add Competitor
+          </button>
+        </div>
       </div>
 
       <AnimatePresence>
