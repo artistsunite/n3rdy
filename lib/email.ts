@@ -37,7 +37,10 @@ export async function sendBriefingEmail(params: {
 
   const { toEmail, toName, briefing, growth } = params;
   const firstName = toName?.split(' ')[0] ?? 'there';
-  const date = new Date().toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const now = new Date();
+  const hour = now.getUTCHours() + 10; // AEST offset; good enough for greeting
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const date = now.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   const topStoriesHtml = briefing.topStories.slice(0, 3).map(s => `
     <tr>
@@ -88,7 +91,7 @@ export async function sendBriefingEmail(params: {
         <!-- Header -->
         <tr><td style="background:linear-gradient(135deg,#0a0a1a,#0d1b2a);border:1px solid #00E5FF22;border-radius:12px 12px 0 0;padding:28px 32px;">
           <div style="color:#00E5FF;font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;margin-bottom:8px;">N3RDY INTELLIGENCE</div>
-          <div style="color:#ffffff;font-size:22px;font-weight:700;margin-bottom:4px;">Good morning, ${firstName}</div>
+          <div style="color:#ffffff;font-size:22px;font-weight:700;margin-bottom:4px;">${greeting}, ${firstName}</div>
           <div style="color:#888;font-size:13px;">${date}</div>
         </td></tr>
 
