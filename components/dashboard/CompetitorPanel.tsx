@@ -43,6 +43,25 @@ const IMPORTANCE_COLORS: Record<string, string> = {
   low: 'text-white/50',
 };
 
+const EVENT_LABELS: Record<string, string> = {
+  pricing_change: 'Pricing',
+  content_change: 'Content',
+  new_post: 'New Post',
+  news_mention: 'News',
+  product_change: 'Product',
+  hiring: 'Hiring',
+  funding: 'Funding',
+};
+
+function timeAgo(iso: string): string {
+  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return `${Math.round(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.round(diff / 3600)}h ago`;
+  if (diff < 604800) return `${Math.round(diff / 86400)}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
 export default function CompetitorPanel() {
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [selected, setSelected] = useState<Competitor | null>(null);
@@ -289,13 +308,16 @@ export default function CompetitorPanel() {
                               <Icon size={16} />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2 mb-1">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
                                 <span className="text-white text-sm font-medium">{event.title}</span>
-                                <span className={`text-xs ${IMPORTANCE_COLORS[event.importance]}`}>{event.importance}</span>
+                                {EVENT_LABELS[event.eventType] && (
+                                  <span className="text-[10px] bg-white/8 text-white/50 px-1.5 py-0.5 rounded flex-shrink-0">{EVENT_LABELS[event.eventType]}</span>
+                                )}
+                                <span className={`text-xs flex-shrink-0 ${IMPORTANCE_COLORS[event.importance]}`}>{event.importance}</span>
                               </div>
                               <p className="text-white/50 text-xs leading-relaxed">{event.aiSummary}</p>
                               <div className="flex items-center gap-3 mt-2">
-                                <span className="text-white/25 text-xs">{new Date(event.detectedAt).toLocaleDateString()}</span>
+                                <span className="text-white/25 text-xs">{timeAgo(event.detectedAt)}</span>
                                 {event.sourceUrl && (
                                   <a href={event.sourceUrl} target="_blank" rel="noopener noreferrer"
                                     className="flex items-center gap-1 text-cyan-400/60 hover:text-cyan-400 text-xs transition-all">
