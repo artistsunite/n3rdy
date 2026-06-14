@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
+import GlobalSearch from '@/components/dashboard/GlobalSearch';
 import {
   LayoutDashboard,
   Newspaper,
@@ -24,6 +25,7 @@ import {
   Crosshair,
   Brain,
   Building2,
+  Search,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -54,6 +56,15 @@ export default function DashboardShell({ children, userName, userImage }: Props)
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [badges, setBadges] = useState<Badges>({ unreadEvents: 0, newOpportunities: 0 });
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setSearchOpen(v => !v); }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   useEffect(() => {
     function fetchBadges() {
@@ -94,6 +105,18 @@ export default function DashboardShell({ children, userName, userImage }: Props)
           </div>
           <span className="font-bold text-white text-lg tracking-tight">N3RDY</span>
           <span className="text-xs text-white/40 ml-auto font-mono">INTEL</span>
+        </div>
+
+        {/* Search */}
+        <div className="px-3 py-2 border-b border-white/5">
+          <button
+            onClick={() => setSearchOpen(true)}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-white/30 hover:text-white/60 hover:bg-white/5 transition-colors text-sm"
+          >
+            <Search size={14} />
+            <span className="flex-1 text-left">Search…</span>
+            <kbd className="text-[9px] font-mono bg-white/5 px-1.5 py-0.5 rounded border border-white/10">⌘K</kbd>
+          </button>
         </div>
 
         {/* Nav */}
@@ -187,6 +210,8 @@ export default function DashboardShell({ children, userName, userImage }: Props)
         {/* Content */}
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>
+
+      <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>
   );
 }
