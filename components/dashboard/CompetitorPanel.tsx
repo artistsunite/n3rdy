@@ -253,7 +253,7 @@ export default function CompetitorPanel() {
                 {c.lastCheckedAt && (
                   <div className="flex items-center gap-1 mt-2 text-white/25 text-xs">
                     <Clock size={10} />
-                    Last scanned {new Date(c.lastCheckedAt).toLocaleDateString()}
+                    Last scanned {timeAgo(c.lastCheckedAt)}
                   </div>
                 )}
               </motion.button>

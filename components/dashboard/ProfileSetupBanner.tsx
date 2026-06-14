@@ -30,11 +30,17 @@ function calcCompletion(p: Profile): number {
   return Math.round((filled / total) * 100);
 }
 
+const DISMISS_KEY = 'n3rdy_profile_banner_dismissed';
+
 export default function ProfileSetupBanner() {
   const [completion, setCompletion] = useState<number | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
+    if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(DISMISS_KEY) === '1') {
+      setDismissed(true);
+      return;
+    }
     fetch('/api/business-profile')
       .then(r => r.json())
       .then(d => {
@@ -90,7 +96,10 @@ export default function ProfileSetupBanner() {
             <ChevronRight size={12} />
           </Link>
           <button
-            onClick={() => setDismissed(true)}
+            onClick={() => {
+              sessionStorage.setItem(DISMISS_KEY, '1');
+              setDismissed(true);
+            }}
             className="text-white/20 hover:text-white/50 transition-colors p-1"
           >
             <X size={14} />

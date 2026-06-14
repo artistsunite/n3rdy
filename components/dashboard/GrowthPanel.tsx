@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, TrendingUp, FlaskConical, Loader2, ChevronRight, Check, X, Play, Square, ClipboardList, ArrowRight, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
 
 interface GrowthOpportunity {
   id: string;
@@ -199,7 +200,14 @@ export default function GrowthPanel() {
       {generateError && (
         <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
           <AlertCircle size={15} className="text-red-400 mt-0.5 flex-shrink-0" />
-          <p className="text-sm text-red-400 flex-1">{generateError}</p>
+          <p className="text-sm text-red-400 flex-1">
+            {generateError}
+            {generateError.includes('Business Profile') && (
+              <Link href="/dashboard/profile" className="ml-2 underline text-red-300 hover:text-red-200 transition-colors">
+                Go to Profile →
+              </Link>
+            )}
+          </p>
           <button onClick={() => setGenerateError(null)} className="text-red-400/50 hover:text-red-400 transition-colors flex-shrink-0">
             <X size={13} />
           </button>

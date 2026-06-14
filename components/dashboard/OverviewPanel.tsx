@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { TrendingUp, TrendingDown, Minus, RefreshCw, Zap, SlidersHorizontal } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, RefreshCw, Zap, SlidersHorizontal, ArrowRight } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import Link from 'next/link';
 import ArticleCard from './ArticleCard';
 import WatchlistActivityWidget from './WatchlistActivityWidget';
 import MarketingCalendarWidget from './MarketingCalendarWidget';
@@ -256,6 +257,9 @@ export default function OverviewPanel({ userName }: { userName?: string | null }
           ))}
         </div>
       )}
+      <Link href="/dashboard/sentiment" className="flex items-center justify-center gap-1.5 text-xs text-white/30 hover:text-n3-primary transition-colors py-1">
+        Full sentiment analysis <ArrowRight size={11} />
+      </Link>
     </div>
   );
 
@@ -300,6 +304,11 @@ export default function OverviewPanel({ userName }: { userName?: string | null }
       ))}
       {articles.length === 0 && (
         <p className="text-sm text-white/40 text-center py-4">No articles loaded yet. Refresh to ingest.</p>
+      )}
+      {articles.length > 0 && (
+        <Link href="/dashboard/news" className="flex items-center justify-center gap-1.5 text-xs text-white/30 hover:text-n3-primary transition-colors py-1">
+          View full news feed <ArrowRight size={11} />
+        </Link>
       )}
     </div>
   );

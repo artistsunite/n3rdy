@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, Loader2, TrendingUp, AlertTriangle, CheckCircle, Eye, Clock, Send, Plus, ChevronLeft, Trash2, Copy, Check } from 'lucide-react';
+import Link from 'next/link';
 
 interface AdvisorReportContent {
   whatChanged: string;
@@ -263,7 +264,14 @@ export default function AdvisorPanel() {
 
       {error && (
         <div className="liquid-glass-card rounded-2xl p-4 border border-red-500/20">
-          <p className="text-red-400 text-sm">{error}</p>
+          <p className="text-red-400 text-sm">
+            {error}
+            {error.includes('Business Profile') && (
+              <Link href="/dashboard/profile" className="ml-2 underline text-red-300 hover:text-red-200 transition-colors">
+                Go to Profile →
+              </Link>
+            )}
+          </p>
         </div>
       )}
 
