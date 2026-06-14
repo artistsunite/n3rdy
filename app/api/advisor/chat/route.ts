@@ -6,7 +6,10 @@ import Anthropic from '@anthropic-ai/sdk';
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 async function buildSystemPrompt(userId: string): Promise<string> {
-  const [profile, opportunities, competitorEvents, latestReport] = await Promise.all([
+  const userSources = await db.userSource.findMany({ where: { userId, isActive: true }, select: { sourceId: true } });
+  const sourceIds = userSources.map(s => s.sourceId);
+
+  const [profile, opportunities, competitorEvents, latestReport, recentArticles] = await Promise.all([
     db.businessProfile.findUnique({ where: { userId } }),
     db.growthOpportunity.findMany({
       where: { userId, status: { in: ['new', 'viewed'] } },
@@ -22,7 +25,21 @@ async function buildSystemPrompt(userId: string): Promise<string> {
       where: { userId },
       orderBy: { generatedAt: 'desc' },
     }),
+    sourceIds.length > 0 ? db.article.findMany({
+      where: {
+        sourceId: { in: sourceIds },
+        analysis: { isNot: null },
+        publishedAt: { gte: new Date(Date.now() - 48 * 3600 * 1000) },
+      },
+      include: { analysis: { select: { shortSummary: true, sentiment: true, marketImpactScore: true } } },
+      orderBy: [{ analysis: { marketImpactScore: 'desc' } }, { publishedAt: 'desc' }],
+      take: 8,
+    }) : Promise.resolve([]),
   ]);
+
+  const articlesText = recentArticles.length
+    ? recentArticles.map(a => `- [${a.analysis?.sentiment ?? 'neutral'}] ${a.title}${a.analysis?.shortSummary ? `: ${a.analysis.shortSummary}` : ''}`).join('\n')
+    : 'No recent articles (ingest and analyse articles first).';
 
   const oppsText = opportunities.length
     ? opportunities.map(o => `- [${o.type}] ${o.title} (impact ${(o.impactScore * 100).toFixed(0)}%, urgency ${(o.urgencyScore * 100).toFixed(0)}%)`).join('\n')
@@ -50,6 +67,9 @@ BUSINESS CONTEXT:
 - Services: ${JSON.stringify(profile?.services ?? [])}
 - Target Audience: ${profile?.targetAudience ?? 'N/A'}
 
+RECENT NEWS (last 48h, highest impact first):
+${articlesText}
+
 TOP GROWTH OPPORTUNITIES:
 ${oppsText}
 
@@ -58,7 +78,7 @@ ${eventsText}
 
 ${reportContext}
 
-You are a strategic advisor who gives direct, actionable advice. Be concise but insightful. Reference specific data from the context above when relevant. Ask clarifying questions when needed. Never be vague — always give concrete next steps.`;
+You are a strategic advisor who gives direct, actionable advice. Be concise but insightful. Reference specific news items or data from the context above when relevant. Ask clarifying questions when needed. Never be vague — always give concrete next steps.`;
 }
 
 export async function POST(req: NextRequest) {
