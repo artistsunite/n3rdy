@@ -10,117 +10,25 @@ const PERIOD_MS: Record<Period, number> = {
   '7d': 7 * 24 * 60 * 60 * 1000,
 };
 
-async function countMentions(
-  term: string,
-  type: string,
-  since: Date
-): Promise<{ count: number; latestHeadline: string | null; latestSentiment: string | null }> {
-  const termLower = term.toLowerCase();
+type Entities = { companies?: string[]; assets?: string[]; people?: string[]; countries?: string[] };
+type AnalysisRow = {
+  articleTitle: string;
+  sentiment: string;
+  entities: Entities | null;
+  sectorsAffected: string[];
+  analyzedAt: Date;
+};
 
-  if (type === 'COMPANY') {
-    const rows = await prisma.articleAnalysis.findMany({
-      where: { analyzedAt: { gte: since } },
-      select: { entities: true, article: { select: { title: true } }, sentiment: true, analyzedAt: true },
-      orderBy: { analyzedAt: 'desc' },
-    });
-    const matches = rows.filter(r => {
-      const ents = r.entities as { companies?: string[] } | null;
-      return ents?.companies?.some(c => c.toLowerCase().includes(termLower));
-    });
-    return {
-      count: matches.length,
-      latestHeadline: matches[0]?.article?.title ?? null,
-      latestSentiment: matches[0]?.sentiment ?? null,
-    };
-  }
+type KeywordRow = { title: string; sentiment: string | null; fetchedAt: Date };
 
-  if (type === 'ASSET') {
-    const rows = await prisma.articleAnalysis.findMany({
-      where: { analyzedAt: { gte: since } },
-      select: { entities: true, article: { select: { title: true } }, sentiment: true, analyzedAt: true },
-      orderBy: { analyzedAt: 'desc' },
-    });
-    const matches = rows.filter(r => {
-      const ents = r.entities as { assets?: string[] } | null;
-      return ents?.assets?.some(a => a.toLowerCase().includes(termLower));
-    });
-    return {
-      count: matches.length,
-      latestHeadline: matches[0]?.article?.title ?? null,
-      latestSentiment: matches[0]?.sentiment ?? null,
-    };
-  }
-
-  if (type === 'SECTOR') {
-    const rows = await prisma.articleAnalysis.findMany({
-      where: { analyzedAt: { gte: since } },
-      select: { sectorsAffected: true, article: { select: { title: true } }, sentiment: true, analyzedAt: true },
-      orderBy: { analyzedAt: 'desc' },
-    });
-    const matches = rows.filter(r => {
-      const sectors = r.sectorsAffected as string[] | null;
-      return sectors?.some(s => s.toLowerCase().includes(termLower));
-    });
-    return {
-      count: matches.length,
-      latestHeadline: matches[0]?.article?.title ?? null,
-      latestSentiment: matches[0]?.sentiment ?? null,
-    };
-  }
-
-  if (type === 'COUNTRY') {
-    const rows = await prisma.articleAnalysis.findMany({
-      where: { analyzedAt: { gte: since } },
-      select: { entities: true, article: { select: { title: true } }, sentiment: true, analyzedAt: true },
-      orderBy: { analyzedAt: 'desc' },
-    });
-    const matches = rows.filter(r => {
-      const ents = r.entities as { countries?: string[] } | null;
-      return ents?.countries?.some(c => c.toLowerCase().includes(termLower));
-    });
-    return {
-      count: matches.length,
-      latestHeadline: matches[0]?.article?.title ?? null,
-      latestSentiment: matches[0]?.sentiment ?? null,
-    };
-  }
-
-  if (type === 'PERSON') {
-    const rows = await prisma.articleAnalysis.findMany({
-      where: { analyzedAt: { gte: since } },
-      select: { entities: true, article: { select: { title: true } }, sentiment: true, analyzedAt: true },
-      orderBy: { analyzedAt: 'desc' },
-    });
-    const matches = rows.filter(r => {
-      const ents = r.entities as { people?: string[] } | null;
-      return ents?.people?.some(p => p.toLowerCase().includes(termLower));
-    });
-    return {
-      count: matches.length,
-      latestHeadline: matches[0]?.article?.title ?? null,
-      latestSentiment: matches[0]?.sentiment ?? null,
-    };
-  }
-
-  // KEYWORD, WEBSITE, SOCIAL_PAGE — text search in title + shortSummary
-  const articles = await prisma.article.findMany({
-    where: {
-      fetchedAt: { gte: since },
-      OR: [
-        { title: { contains: term, mode: 'insensitive' } },
-        { analysis: { shortSummary: { contains: term, mode: 'insensitive' } } },
-      ],
-    },
-    select: { title: true, analysis: { select: { sentiment: true } } },
-    orderBy: { fetchedAt: 'desc' },
-    take: 50,
-  });
-
-  return {
-    count: articles.length,
-    latestHeadline: articles[0]?.title ?? null,
-    latestSentiment: articles[0]?.analysis?.sentiment ?? null,
-  };
+function matchEntities(entities: Entities | null, sectors: string[], term: string, type: string): boolean {
+  const lower = term.toLowerCase();
+  if (type === 'COMPANY') return entities?.companies?.some(c => c.toLowerCase().includes(lower)) ?? false;
+  if (type === 'ASSET') return entities?.assets?.some(a => a.toLowerCase().includes(lower)) ?? false;
+  if (type === 'PERSON') return entities?.people?.some(p => p.toLowerCase().includes(lower)) ?? false;
+  if (type === 'COUNTRY') return entities?.countries?.some(c => c.toLowerCase().includes(lower)) ?? false;
+  if (type === 'SECTOR') return sectors?.some(s => s.toLowerCase().includes(lower)) ?? false;
+  return false;
 }
 
 export async function GET(req: NextRequest) {
@@ -137,20 +45,83 @@ export async function GET(req: NextRequest) {
     orderBy: { priority: 'desc' },
   });
 
-  const items = await Promise.all(
-    watchlist.map(async item => {
-      const { count, latestHeadline, latestSentiment } = await countMentions(item.value, item.type, since);
-      return {
-        id: item.id,
-        type: item.type,
-        value: item.value,
-        label: item.label,
-        count,
-        latestHeadline,
-        latestSentiment,
-      };
-    })
+  if (watchlist.length === 0) return NextResponse.json({ items: [], period });
+
+  const entityTypes = new Set(['COMPANY', 'ASSET', 'PERSON', 'COUNTRY', 'SECTOR']);
+  const entityItems = watchlist.filter(i => entityTypes.has(i.type));
+  const keywordItems = watchlist.filter(i => !entityTypes.has(i.type));
+
+  // One batch fetch for all entity-type items (COMPANY, ASSET, PERSON, COUNTRY, SECTOR)
+  const analysisRowsPromise = entityItems.length > 0
+    ? prisma.articleAnalysis.findMany({
+        where: { analyzedAt: { gte: since } },
+        select: {
+          entities: true,
+          sectorsAffected: true,
+          sentiment: true,
+          analyzedAt: true,
+          article: { select: { title: true } },
+        },
+        orderBy: { analyzedAt: 'desc' },
+        take: 2000,
+      })
+    : Promise.resolve([]);
+
+  // Keyword-type items use DB-level text search — fan out in parallel
+  const keywordSearches = keywordItems.map(item =>
+    prisma.article.findMany({
+      where: {
+        fetchedAt: { gte: since },
+        OR: [
+          { title: { contains: item.value, mode: 'insensitive' } },
+          { analysis: { shortSummary: { contains: item.value, mode: 'insensitive' } } },
+        ],
+      },
+      select: { title: true, fetchedAt: true, analysis: { select: { sentiment: true } } },
+      orderBy: { fetchedAt: 'desc' },
+      take: 50,
+    }).then(rows => ({ item, rows }))
   );
+
+  const [analysisRows, ...keywordResults] = await Promise.all([analysisRowsPromise, ...keywordSearches]);
+
+  const rows: AnalysisRow[] = (analysisRows as Array<{ entities: unknown; sectorsAffected: unknown; sentiment: string; analyzedAt: Date; article: { title: string } }>).map(r => ({
+    articleTitle: r.article.title,
+    sentiment: r.sentiment,
+    entities: r.entities as Entities | null,
+    sectorsAffected: (r.sectorsAffected as string[]) ?? [],
+    analyzedAt: r.analyzedAt,
+  }));
+
+  const entityResults = entityItems.map(item => {
+    const matches = rows.filter(r => matchEntities(r.entities, r.sectorsAffected, item.value, item.type));
+    return { item, matches };
+  });
+
+  const items = [
+    ...entityResults.map(({ item, matches }) => ({
+      id: item.id,
+      type: item.type,
+      value: item.value,
+      label: item.label,
+      count: matches.length,
+      latestHeadline: matches[0]?.articleTitle ?? null,
+      latestSentiment: matches[0]?.sentiment ?? null,
+    })),
+    ...keywordResults.map(({ item, rows: krows }) => ({
+      id: item.id,
+      type: item.type,
+      value: item.value,
+      label: item.label,
+      count: krows.length,
+      latestHeadline: krows[0]?.title ?? null,
+      latestSentiment: krows[0]?.analysis?.sentiment ?? null,
+    })),
+  ];
+
+  // Restore original watchlist order
+  const order = new Map(watchlist.map((w, i) => [w.id, i]));
+  items.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
 
   return NextResponse.json({ items, period });
 }
