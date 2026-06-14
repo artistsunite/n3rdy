@@ -19,22 +19,14 @@ export default function GrowthIntelligenceWidget() {
   const [data, setData] = useState<GrowthSummary | null>(null);
 
   async function load() {
-    const [eventsRes, oppsRes, reportRes] = await Promise.allSettled([
-      fetch('/api/competitors').then(r => r.json()),
+    const [badgesRes, oppsRes, reportRes] = await Promise.allSettled([
+      fetch('/api/dashboard/badges').then(r => r.json()),
       fetch('/api/growth/opportunities?status=new').then(r => r.json()),
       fetch('/api/advisor/report').then(r => r.json()),
     ]);
 
-    let unreadEvents = 0;
-    if (eventsRes.status === 'fulfilled') {
-      const competitors: Array<{ id: string }> = eventsRes.value.competitors ?? [];
-      const eventCounts = await Promise.allSettled(
-        competitors.slice(0, 5).map((c: { id: string }) =>
-          fetch(`/api/competitors/${c.id}/events`).then(r => r.json()).then((d: { events?: Array<{ isRead: boolean }> }) => (d.events ?? []).filter((e: { isRead: boolean }) => !e.isRead).length)
-        )
-      );
-      unreadEvents = eventCounts.reduce((sum, r) => sum + (r.status === 'fulfilled' ? r.value : 0), 0);
-    }
+    // Use the lightweight badge API for unread count (single DB query)
+    const unreadEvents = badgesRes.status === 'fulfilled' ? (badgesRes.value.unreadEvents ?? 0) : 0;
 
     let newOpportunities = 0;
     let topOpportunityTitle: string | null = null;
