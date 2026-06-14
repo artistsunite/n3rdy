@@ -208,6 +208,14 @@ export default function AdvisorPanel() {
         setMessages(prev => prev.slice(0, -1));
       }
     } finally {
+      // If assistant message ended up empty (stream error), replace with error text
+      setMessages(prev => {
+        const last = prev[prev.length - 1];
+        if (last?.role === 'assistant' && !last.content) {
+          return [...prev.slice(0, -1), { role: 'assistant', content: 'Sorry, something went wrong. Please try again.' }];
+        }
+        return prev;
+      });
       setStreaming(false);
       abortRef.current = null;
     }

@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   if (!type || !value) return NextResponse.json({ error: 'type and value are required' }, { status: 400 });
 
   const item = await db.watchlistItem.create({
-    data: { userId: uid, type, value, label: label ?? value, priority },
+    data: { userId: uid, type: String(type).toUpperCase(), value, label: label ?? value, priority },
   });
 
   return NextResponse.json({ item }, { status: 201 });

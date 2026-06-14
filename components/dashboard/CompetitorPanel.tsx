@@ -71,6 +71,7 @@ export default function CompetitorPanel() {
   const [scanQueued, setScanQueued] = useState(false);
   const [scanningAll, setScanningAll] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingEvents, setLoadingEvents] = useState(false);
   const [form, setForm] = useState({ name: '', website: '', pricingUrl: '', blogUrl: '', productUrl: '' });
 
   const load = useCallback(async () => {
@@ -96,9 +97,12 @@ export default function CompetitorPanel() {
 
   const selectCompetitor = useCallback(async (c: Competitor) => {
     setSelected(c);
+    setEvents([]);
+    setLoadingEvents(true);
     const r = await fetch(`/api/competitors/${c.id}/events`);
     const d = await r.json() as { events: CompetitorEvent[] };
     setEvents(d.events);
+    setLoadingEvents(false);
     // Clear the unread badge on the list item after events are marked read
     setCompetitors(prev => prev.map(comp =>
       comp.id === c.id ? { ...comp, _count: { events: 0 } } : comp
@@ -290,7 +294,11 @@ export default function CompetitorPanel() {
                   </div>
                 </div>
 
-                {events.length === 0 ? (
+                {loadingEvents ? (
+                  <div className="liquid-glass-card rounded-2xl p-6 text-center">
+                    <div className="w-6 h-6 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin mx-auto" />
+                  </div>
+                ) : events.length === 0 ? (
                   <div className="liquid-glass-card rounded-2xl p-6 text-center">
                     <p className="text-white/40 text-sm">No events detected yet.</p>
                     <p className="text-white/25 text-xs mt-1">Scan this competitor to detect changes.</p>

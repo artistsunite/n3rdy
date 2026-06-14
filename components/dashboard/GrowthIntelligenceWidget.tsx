@@ -145,7 +145,9 @@ export default function GrowthIntelligenceWidget() {
                   </p>
                   <p className="text-[10px] text-white/30">
                     {data.advisorReportAge != null
-                      ? data.advisorReportAge < 1 ? 'Just now' : `${data.advisorReportAge}h ago`
+                      ? data.advisorReportAge < 1 ? 'Just now'
+                        : data.advisorReportAge >= 24 ? `${Math.round(data.advisorReportAge / 24)}d ago`
+                        : `${data.advisorReportAge}h ago`
                       : 'no report yet'}
                   </p>
                 </>
