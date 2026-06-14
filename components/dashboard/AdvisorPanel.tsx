@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, Loader2, TrendingUp, AlertTriangle, CheckCircle, Eye, Clock, Send, Plus, ChevronLeft, Trash2 } from 'lucide-react';
+import { Brain, Loader2, TrendingUp, AlertTriangle, CheckCircle, Eye, Clock, Send, Plus, ChevronLeft, Trash2, Copy, Check } from 'lucide-react';
 
 interface AdvisorReportContent {
   whatChanged: string;
@@ -42,6 +42,7 @@ export default function AdvisorPanel() {
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   // Chat state
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -68,6 +69,39 @@ export default function AdvisorPanel() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const copyReport = useCallback(() => {
+    if (!report) return;
+    const c = report.content;
+    const lines = [
+      `# AI Growth Advisor Report — ${new Date(report.generatedAt).toLocaleDateString()}`,
+      '',
+      '## What Changed',
+      c.whatChanged,
+      '',
+      '## Why It Matters',
+      c.whyItMatters,
+      '',
+      '## Top Opportunities',
+      ...(c.topOpportunities ?? []).map(o => `- **${o.title}**: ${o.impact}\n  Action: ${o.action}`),
+      '',
+      '## Top Threats',
+      ...(c.topThreats ?? []).map(t => `- **${t.title}**: ${t.risk}\n  Mitigation: ${t.mitigation}`),
+      '',
+      '## Recommended Actions',
+      ...(c.recommendedActions ?? []).map((a, i) => `${i + 1}. ${a}`),
+      '',
+      '## 7-Day Outlook',
+      c.outlook7d,
+      '',
+      '## 30-Day Outlook',
+      c.outlook30d,
+    ];
+    navigator.clipboard.writeText(lines.join('\n')).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [report]);
 
   const generate = useCallback(async () => {
     setGenerating(true);
@@ -208,11 +242,21 @@ export default function AdvisorPanel() {
             ))}
           </div>
           {view === 'report' && (
-            <button onClick={generate} disabled={generating}
-              className="flex items-center gap-2 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 text-cyan-300 px-4 py-2 rounded-xl text-sm font-medium transition-all disabled:opacity-50">
-              {generating ? <Loader2 size={14} className="animate-spin" /> : <Brain size={14} />}
-              {generating ? 'Generating…' : report ? 'Regenerate' : 'Generate Report'}
-            </button>
+            <div className="flex items-center gap-2">
+              {report && (
+                <button onClick={copyReport}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/40 hover:text-white/70 text-sm transition-all"
+                  title="Copy report as markdown">
+                  {copied ? <Check size={13} className="text-green-400" /> : <Copy size={13} />}
+                  {copied ? 'Copied!' : 'Copy'}
+                </button>
+              )}
+              <button onClick={generate} disabled={generating}
+                className="flex items-center gap-2 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 text-cyan-300 px-4 py-2 rounded-xl text-sm font-medium transition-all disabled:opacity-50">
+                {generating ? <Loader2 size={14} className="animate-spin" /> : <Brain size={14} />}
+                {generating ? 'Generating…' : report ? 'Regenerate' : 'Generate Report'}
+              </button>
+            </div>
           )}
         </div>
       </div>
