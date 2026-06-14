@@ -230,27 +230,39 @@ export default function BriefingsPanel() {
                 className={`liquid-glass-card rounded-xl overflow-hidden transition-all ${!b.read ? 'shadow-[inset_0_1px_0_rgba(0,229,255,0.2)]' : ''}`}
               >
                 <button
-                  className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-white/2 transition-colors"
+                  className="w-full flex items-start justify-between px-5 py-4 text-left hover:bg-white/2 transition-colors"
                   onClick={() => {
                     setExpanded(isOpen ? null : b.id);
                     if (!b.read) markRead(b.id);
                   }}
                 >
-                  <div className="flex items-center gap-3">
-                    {!b.read && <div className="w-2 h-2 bg-n3-primary rounded-full flex-shrink-0" />}
-                    <div>
-                      <div className="flex items-center gap-2">
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    {!b.read && <div className="w-2 h-2 bg-n3-primary rounded-full flex-shrink-0 mt-1.5" />}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-semibold text-white capitalize">{b.type} Briefing</span>
                         <span className="text-xs bg-n3-primary/10 text-n3-primary px-2 py-0.5 rounded-full">
                           {content?.sentimentOverview?.overall ?? 'mixed'}
                         </span>
+                        {content?.riskSignals?.length > 0 && (
+                          <span className="text-xs bg-n3-warning/10 text-n3-warning px-2 py-0.5 rounded-full">
+                            {content.riskSignals.length} risk{content.riskSignals.length > 1 ? 's' : ''}
+                          </span>
+                        )}
                       </div>
-                      <div className="text-xs text-white/50 mt-0.5">
+                      <div className="text-xs text-white/40 mt-0.5">
                         {new Date(b.createdAt).toLocaleString()}
                       </div>
+                      {!isOpen && content?.executiveSummary && (
+                        <p className="text-xs text-white/50 mt-1.5 line-clamp-2 leading-relaxed">
+                          {content.executiveSummary}
+                        </p>
+                      )}
                     </div>
                   </div>
-                  {isOpen ? <ChevronUp size={16} className="text-white/50" /> : <ChevronDown size={16} className="text-white/50" />}
+                  <div className="flex-shrink-0 ml-3 mt-0.5">
+                    {isOpen ? <ChevronUp size={16} className="text-white/50" /> : <ChevronDown size={16} className="text-white/50" />}
+                  </div>
                 </button>
 
                 {isOpen && content && (
